@@ -30,9 +30,6 @@ class NavigationService
         }
 
         $checkPermissions = (bool) config('admin.rbac', false);
-        if ($checkPermissions && ! $user) {
-            return [];
-        }
 
         $items = [];
         foreach (glob(app_path('Navigation/*.php')) ?: [] as $file) {
@@ -44,12 +41,13 @@ class NavigationService
 
         usort($items, fn (array $a, array $b) => ($a['order'] ?? 100) <=> ($b['order'] ?? 100));
 
-        $checkPermissions = (bool) config('admin.rbac', false);
         $groups = [];
 
         foreach ($items as $item) {
-            if ($checkPermissions && ! empty($item['permission']) && ! $user->can($item['permission'])) {
-                continue;
+            if ($checkPermissions && ! empty($item['permission'])) {
+                if (! $user || ! $user->can($item['permission'])) {
+                    continue;
+                }
             }
 
             // Skip items whose route does not exist yet instead of crashing the layout.

@@ -13,6 +13,7 @@ class AdminPermissionSeeder extends Seeder
     private array $permissions = [
         'role' => ['read', 'create', 'update', 'delete'],
         'user' => ['read', 'create', 'update', 'delete', 'toggle_status'],
+        'settings' => ['read', 'update'],
     ];
 
     public function run(): void
