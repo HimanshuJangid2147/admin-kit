@@ -16,9 +16,5 @@
     "env": {
         "ADMIN_SEO_DRAWER": "true"
     },
-    "notes": [
-        "Import resources/js/seoCard.js in your app entry point (e.g. resources/js/app.js).",
-        "Place <x-admin.seo-trigger :model=\"$model\" /> in page action bars and <x-admin.seo-drawer :model=\"$model\" /> inside your resource form.",
-        "Optional: register 'app/Helpers/seo.php' in composer.json autoload.files to enable the seo_meta() global helper."
-    ]
+    "notes": []
 }

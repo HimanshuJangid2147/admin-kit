@@ -62,10 +62,5 @@
     "npm": [
         "@fortawesome/fontawesome-free"
     ],
-    "notes": [
-        "Define an 'admin' guard in config/auth.php and a route named admin.dashboard.",
-        "Include the sidebar with @include('partials.sidebar').",
-        "Add route 'translations/auto-fill' if you use the auto-translation endpoint.",
-        "Ensure FontAwesome CSS is imported in resources/css/app.css: @import '@fortawesome/fontawesome-free/css/all.min.css';"
-    ]
+    "notes": []
 }

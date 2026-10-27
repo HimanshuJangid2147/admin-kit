@@ -18,6 +18,7 @@
         "app/Http/Requests/Admin/UserManagement/ToggleAdminStatusRequest.php.stub": "app/Http/Requests/Admin/UserManagement/ToggleAdminStatusRequest.php",
         "app/Http/Requests/Admin/UserManagement/UpdateAdminRequest.php.stub": "app/Http/Requests/Admin/UserManagement/UpdateAdminRequest.php",
         "app/Http/Requests/Admin/UserManagement/ViewAdminRequest.php.stub": "app/Http/Requests/Admin/UserManagement/ViewAdminRequest.php",
+        "app/Models/Admin.php.stub": "app/Models/Admin.php",
         "app/Navigation/rbac.php.stub": "app/Navigation/rbac.php",
         "app/Providers/AdminAuthServiceProvider.php.stub": "app/Providers/AdminAuthServiceProvider.php",
         "app/Repositories/Admin/Interface/AdminRepositoryInterface.php.stub": "app/Repositories/Admin/Interface/AdminRepositoryInterface.php",
@@ -50,7 +51,9 @@
         "resources/views/partials/image.blade.php.stub": "resources/views/partials/image.blade.php",
         "routes/admin/rbac.php.stub": "routes/admin/rbac.php"
     },
-    "migrations": {},
+    "migrations": {
+        "database/migrations/create_admin_users_table.php.stub": "create_admin_users_table"
+    },
     "providers": ["App\\Providers\\AdminAuthServiceProvider"],
     "env": {
         "ADMIN_RBAC": "true"
@@ -65,8 +68,5 @@
         "datatables.net-dt",
         "sweetalert2"
     ],
-    "notes": [
-        "php artisan vendor:publish --provider=\"Spatie\\Permission\\PermissionServiceProvider\", then php artisan migrate.",
-        "Add the Spatie HasRoles trait to your User/Admin model and run: php artisan db:seed --class=AdminPermissionSeeder"
-    ]
+    "notes": []
 }

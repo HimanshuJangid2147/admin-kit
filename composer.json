@@ -8,6 +8,8 @@
         "illuminate/console": "^11.0|^12.0|^13.0",
         "illuminate/support": "^11.0|^12.0|^13.0",
         "spatie/laravel-translatable": "^6.0|^7.0",
+        "spatie/laravel-permission": "^6.0|^7.0|^8.0",
+        "yajra/laravel-datatables-oracle": "^11.0|^12.0|^13.0",
         "stichoza/google-translate-php": "^5.2",
         "mews/purifier": "^3.4",
         "intervention/image-laravel": "^1.4"

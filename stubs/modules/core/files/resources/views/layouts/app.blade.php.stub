@@ -92,6 +92,14 @@
     @if (view()->exists('partials.notification-drawer'))
         @include('partials.notification-drawer')
     @endif
+
+    @if (view()->exists('partials.banner-upload-modal'))
+        @include('partials.banner-upload-modal')
+    @endif
+
+    @if (view()->exists('partials.pdf-upload-modal'))
+        @include('partials.pdf-upload-modal')
+    @endif
     </div>
 
     @stack('scripts')

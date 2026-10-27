@@ -45,9 +45,37 @@ Require `admin-kit` as a development dependency:
 composer require hj4104/admin-kit:@dev --dev
 ```
 
+### Complete Turnkey Install (Single Command)
+
+To install all modules, configure assets, run migrations, and seed default roles and users automatically:
+
+```bash
+php artisan admin:install --all --migrate
+```
+
+That's it! Open `/admin` in your browser.
+- **Default Super Admin:** `admin@example.com`
+- **Default Password:** `password`
+
 ---
 
-## Usage
+## What Gets Automated
+
+When you run `php artisan admin:install`, the package automatically handles all setup steps without manual intervention:
+1. **Pre-Compiled Production Assets**: Bundles pre-compiled CSS, JS, and webfonts directly into `public/build/` so `@vite` works out-of-the-box with zero build steps or Node.js required.
+2. **CSS & Icon Imports**: Injects `@import "./admin-theme.css";` and FontAwesome into `resources/css/app.css`.
+3. **JavaScript Imports**: Injects notification drawer, page banner, SEO drawer, and TipTap document studio into `resources/js/app.js`.
+4. **NPM Dependencies**: Adds FontAwesome, jQuery, DataTables, SweetAlert2, Pusher, and TipTap into `package.json` (and can optionally run `npm install` with `--npm`).
+5. **Dynamic Auth Guard**: Dynamically registers the `admin` guard and `admins` provider without needing manual edits to `config/auth.php`.
+6. **Spatie Permissions**: Publishes Spatie migrations & config, runs migrations, and seeds roles (`super-admin`, `admin`) and permissions.
+7. **Default Admin User**: Automatically provisions a default super-admin account (`admin@example.com` / `password`).
+8. **Automated Scheduler**: Adds `uploads:clean` daily scheduled cleanup to `routes/console.php`.
+9. **Composer Autoload**: Adds `app/Helpers/seo.php` to `autoload.files` in `composer.json`.
+10. **Dashboard & Routing**: Registers `/admin` dashboard route redirecting to settings or roles index.
+
+---
+
+## Usage Options
 
 ### 1. Inspect Available Modules and Themes
 
@@ -55,29 +83,35 @@ composer require hj4104/admin-kit:@dev --dev
 php artisan admin:install --list
 ```
 
-### 2. Install Modules and Choose a Theme
+### 2. Interactive Installation
 
-To install specific modules with a theme:
-
-```bash
-php artisan admin:install --modules=core,rbac,settings,uploads --theme=slate-indigo
-```
-
-To install all modules:
+Simply run `admin:install` without arguments to step through an interactive wizard:
 
 ```bash
-php artisan admin:install --modules=core,rbac,settings,settings_pdfs,uploads,banners,notifications,seo_drawer,document_studio --theme=slate-indigo
+php artisan admin:install
 ```
 
-### 3. Overwriting Existing Files
+### 3. Install All Modules Turnkey
+
+```bash
+php artisan admin:install --all --migrate --theme=slate-indigo
+```
+
+### 4. Install Specific Modules
+
+```bash
+php artisan admin:install --modules=core,rbac,settings,uploads --migrate --theme=emerald-orange
+```
+
+### 5. Overwriting Existing Files
 
 By default, existing application files are safely preserved and reported as `skipped`. Pass `--force` to overwrite:
 
 ```bash
-php artisan admin:install --modules=rbac --force
+php artisan admin:install --all --force --migrate
 ```
 
-### 4. Detecting Code Drift
+### 6. Detecting Code Drift
 
 Compare your application's files against the recorded lockfile and stub definitions:
 

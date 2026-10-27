@@ -30,8 +30,25 @@ class AdminPermissionSeeder extends Seeder
             }
         }
 
-        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => $guard]);
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => $guard]);
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
+
+        // Create default super admin account if none exists
+        if (class_exists(\App\Models\Admin::class) && \Illuminate\Support\Facades\Schema::hasTable('admin_users')) {
+            $admin = \App\Models\Admin::firstOrCreate(
+                ['email' => 'admin@example.com'],
+                [
+                    'name' => 'Super Admin',
+                    'username' => 'admin',
+                    'password' => 'password',
+                    'is_active' => true,
+                ]
+            );
+
+            if (! $admin->hasRole($superAdminRole)) {
+                $admin->assignRole($superAdminRole);
+            }
+        }
 
         $registrar->forgetCachedPermissions();
     }

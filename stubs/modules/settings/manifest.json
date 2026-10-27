@@ -34,7 +34,5 @@
     "npm": [
         "sweetalert2"
     ],
-    "notes": [
-        "Run php artisan migrate to create the site_settings table."
-    ]
+    "notes": []
 }

@@ -21,9 +21,5 @@
         "@tiptap/extension-bubble-menu",
         "quill"
     ],
-    "notes": [
-        "Run npm install @tiptap/core @tiptap/starter-kit @tiptap/extension-table @tiptap/extension-bubble-menu quill to install editor libraries.",
-        "Import resources/js/documentStudio.js (for TipTap studio) or resources/js/quillTextEditor.js (for Quill) in your app entry point (e.g. resources/js/app.js).",
-        "Use <x-admin.document-editor name=\"content[en]\" :value=\"$content\" locale=\"en\" /> inside your forms."
-    ]
+    "notes": []
 }

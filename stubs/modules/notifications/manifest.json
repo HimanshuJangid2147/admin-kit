@@ -28,9 +28,5 @@
     "npm": [
         "pusher-js"
     ],
-    "notes": [
-        "Run php artisan migrate to create the admin_notifications table.",
-        "Import resources/js/notification-drawer.js in your app entry point (e.g. resources/js/app.js).",
-        "Configure PUSHER_APP_KEY, PUSHER_APP_SECRET, and PUSHER_APP_CLUSTER in .env if using real-time broadcasting."
-    ]
+    "notes": []
 }

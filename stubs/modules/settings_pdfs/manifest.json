@@ -13,7 +13,5 @@
     },
     "composer": [],
     "npm": [],
-    "notes": [
-        "Include the PDF modal with @include('partials.pdf-upload-modal') if used on specific resource pages."
-    ]
+    "notes": []
 }

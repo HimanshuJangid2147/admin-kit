@@ -26,9 +26,5 @@
     "providers": [
         "App\\Providers\\AdminBannerServiceProvider"
     ],
-    "notes": [
-        "Run php artisan migrate to create the banners table.",
-        "Include the banner modal with @include('partials.banner-upload-modal') in views that allow changing hero banners.",
-        "Import resources/js/pageBanner.js in your app entry point (e.g. resources/js/app.js)."
-    ]
+    "notes": []
 }

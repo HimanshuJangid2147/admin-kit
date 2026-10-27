@@ -41,8 +41,5 @@
         "intervention/image-laravel"
     ],
     "npm": [],
-    "notes": [
-        "Run php artisan migrate to create the upload_stagings table.",
-        "Add $schedule->command('uploads:clean')->daily(); to routes/console.php."
-    ]
+    "notes": []
 }
