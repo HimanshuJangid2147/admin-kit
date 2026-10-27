@@ -13,7 +13,8 @@ class InstallCommand extends Command
         {--modules= : Comma-separated modules to install (core is always included)}
         {--theme= : Theme preset name}
         {--list : List available modules and themes}
-        {--force : Overwrite files that already exist}';
+        {--force : Overwrite files that already exist}
+        {--migrate : Run database migrations after copying files}';
 
     protected $description = 'Copy the reusable admin base code into this application';
 
@@ -103,6 +104,12 @@ class InstallCommand extends Command
 
                 return self::FAILURE;
             }
+        }
+
+        if ($hasMigrations && ($this->option('migrate') || ($this->input->isInteractive() && $this->confirm('Would you like to run database migrations now?', true)))) {
+            $this->newLine();
+            $this->components->info('Running database migrations...');
+            $this->call('migrate', ['--force' => true]);
         }
 
         $missing = array_values(array_filter(

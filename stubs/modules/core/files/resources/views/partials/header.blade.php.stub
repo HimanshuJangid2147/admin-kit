@@ -3,7 +3,12 @@
     $currentLocale = app()->getLocale();
     $supportedLocales = config('translations.supported_locales', config('admin.locales.supported', ['en', 'ru', 'kk']));
     $guard = config('admin.guard', 'admin');
-    $user = auth($guard)->user();
+    $user = null;
+    try {
+        $user = auth($guard)->user() ?? auth()->user();
+    } catch (\Throwable $e) {
+        $user = auth()->user();
+    }
 @endphp
 
 <header class="sticky top-0 z-30 h-16 px-4 md:px-8 flex items-center justify-between bg-background/80 backdrop-blur-md border-b border-border/50">

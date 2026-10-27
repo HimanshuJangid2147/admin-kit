@@ -22,8 +22,15 @@ class NavigationService
 {
     public function getSidebarMenu(): array
     {
-        $user = Auth::guard(config('admin.guard', 'admin'))->user();
-        if (! $user) {
+        $guard = config('admin.guard', 'admin');
+        try {
+            $user = Auth::guard($guard)->user() ?? Auth::user();
+        } catch (\Throwable $e) {
+            $user = Auth::user();
+        }
+
+        $checkPermissions = (bool) config('admin.rbac', false);
+        if ($checkPermissions && ! $user) {
             return [];
         }
 
