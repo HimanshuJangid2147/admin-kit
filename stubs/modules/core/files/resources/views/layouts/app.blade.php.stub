@@ -46,7 +46,12 @@
     </script>
 
     {{-- Favicon --}}
-    <link rel="icon" type="image/svg+xml" href="{{ asset(config('admin.brand.favicon', 'icons/favicon.svg')) }}">
+    @php
+        $faviconPath = config('admin.brand.favicon', 'icons/favicon.svg');
+    @endphp
+    @if (file_exists(public_path($faviconPath)))
+        <link rel="icon" type="image/svg+xml" href="{{ asset($faviconPath) }}">
+    @endif
 
     {{-- Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">

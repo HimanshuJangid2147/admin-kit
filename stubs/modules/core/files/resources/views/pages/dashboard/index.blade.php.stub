@@ -1,0 +1,255 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="space-y-6">
+    <x-page-header
+        title="{{ statictranslations('Dashboard & Setup') }}"
+        subtitle="{{ statictranslations('Central administrative control center and system overview.') }}"
+    >
+        <x-slot:actions>
+            @if (Route::has('admin.settings.index'))
+                <a href="{{ route('admin.settings.index') }}" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-brand-green-hover transition-colors shadow-xs flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-[11px]"></i>
+                    <span>{{ statictranslations('Site Settings') }}</span>
+                </a>
+            @endif
+        </x-slot:actions>
+    </x-page-header>
+
+    {{-- Welcome / Quick-Start Banner --}}
+    <div class="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-card p-6 shadow-sm">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="space-y-1.5">
+                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
+                    <i class="fa-solid fa-circle-check text-[10px]"></i>
+                    <span>{{ statictranslations('AdminKit Active & Operational') }}</span>
+                </div>
+                <h2 class="text-xl font-bold text-foreground">
+                    {{ statictranslations('Welcome to your Admin Control Panel') }}
+                </h2>
+                <p class="text-xs text-muted-foreground max-w-2xl leading-relaxed">
+                    {{ statictranslations('Your administrative framework is fully initialized with clean architecture, Spatie RBAC, trilingual translation, and secure ID-less routes.') }}
+                </p>
+            </div>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                <div class="px-3.5 py-2 rounded-xl bg-muted/60 border border-border/80 text-[11px] font-mono text-muted-foreground flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield text-primary"></i>
+                    <span>admin@example.com</span>
+                </div>
+                @if (Route::has('admin.users.index'))
+                    <a href="{{ route('admin.users.index') }}" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-card border border-border hover:bg-muted text-foreground transition-colors flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-users text-[11px] text-muted-foreground"></i>
+                        <span>{{ statictranslations('Team Members') }}</span>
+                    </a>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- Top Metrics Row --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {{-- Administrators --}}
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-2xs space-y-2">
+            <div class="flex items-center justify-between text-muted-foreground">
+                <span class="text-xs font-medium uppercase tracking-wider">{{ statictranslations('Administrators') }}</span>
+                <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <i class="fa-solid fa-user-shield text-sm"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-foreground font-mono">
+                {{ $metrics['admins_count'] }}
+            </div>
+            <div class="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <i class="fa-solid fa-check text-green-500 text-[10px]"></i>
+                <span>{{ statictranslations('Guard:') }} <code class="font-mono text-foreground">{{ $metrics['guard'] }}</code></span>
+            </div>
+        </div>
+
+        {{-- Roles & Permissions --}}
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-2xs space-y-2">
+            <div class="flex items-center justify-between text-muted-foreground">
+                <span class="text-xs font-medium uppercase tracking-wider">{{ statictranslations('Roles & Access') }}</span>
+                <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <i class="fa-solid fa-key text-sm"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-foreground font-mono">
+                {{ $metrics['roles_count'] }}
+            </div>
+            <div class="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <i class="fa-solid fa-shield text-amber-500 text-[10px]"></i>
+                <span>{{ statictranslations('Spatie RBAC active') }}</span>
+            </div>
+        </div>
+
+        {{-- Hero Banners --}}
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-2xs space-y-2">
+            <div class="flex items-center justify-between text-muted-foreground">
+                <span class="text-xs font-medium uppercase tracking-wider">{{ statictranslations('Hero Banners') }}</span>
+                <div class="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center">
+                    <i class="fa-solid fa-images text-sm"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-foreground font-mono">
+                {{ $metrics['banners_count'] }}
+            </div>
+            <div class="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <i class="fa-solid fa-language text-cyan-500 text-[10px]"></i>
+                <span>{{ statictranslations('Trilingual slides') }}</span>
+            </div>
+        </div>
+
+        {{-- Site Settings Status --}}
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-2xs space-y-2">
+            <div class="flex items-center justify-between text-muted-foreground">
+                <span class="text-xs font-medium uppercase tracking-wider">{{ statictranslations('Site Settings') }}</span>
+                <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                    <i class="fa-solid fa-sliders text-sm"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-foreground font-mono">
+                @if ($metrics['settings_configured'])
+                    <span class="text-emerald-500 text-lg font-bold">{{ statictranslations('Configured') }}</span>
+                @else
+                    <span class="text-amber-500 text-lg font-bold">{{ statictranslations('Default') }}</span>
+                @endif
+            </div>
+            <div class="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <i class="fa-solid fa-palette text-emerald-500 text-[10px]"></i>
+                <span>{{ statictranslations('Theme:') }} <span class="capitalize text-foreground font-medium">{{ str_replace('-', ' ', $metrics['theme']) }}</span></span>
+            </div>
+        </div>
+    </div>
+
+    {{-- First-Time Setup Checklist & Module Launchpad --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {{-- Setup Checklist (1 Col) --}}
+        <div class="rounded-2xl border border-border bg-card p-6 shadow-2xs space-y-5">
+            <div class="flex items-center justify-between pb-3 border-b border-border/70">
+                <div class="space-y-0.5">
+                    <h3 class="font-bold text-sm text-foreground flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-primary text-xs"></i>
+                        <span>{{ statictranslations('Setup Checklist') }}</span>
+                    </h3>
+                    <p class="text-[11px] text-muted-foreground">{{ statictranslations('Key onboarding milestones.') }}</p>
+                </div>
+            </div>
+
+            <ul class="space-y-3.5">
+                <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 rounded-full bg-green-500/15 text-green-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="fa-solid fa-check text-[10px]"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <div class="text-xs font-semibold text-foreground">{{ statictranslations('Admin Guard & Session') }}</div>
+                        <div class="text-[11px] text-muted-foreground">{{ statictranslations('Dynamic admin guard and provider are operational.') }}</div>
+                    </div>
+                </li>
+
+                <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 rounded-full bg-green-500/15 text-green-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="fa-solid fa-check text-[10px]"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <div class="text-xs font-semibold text-foreground">{{ statictranslations('Super-Admin Role & Seeder') }}</div>
+                        <div class="text-[11px] text-muted-foreground">{{ statictranslations('Super-admin bypass gate and base permissions created.') }}</div>
+                    </div>
+                </li>
+
+                <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 rounded-full bg-green-500/15 text-green-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="fa-solid fa-check text-[10px]"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <div class="text-xs font-semibold text-foreground">{{ statictranslations('Vite Production Assets') }}</div>
+                        <div class="text-[11px] text-muted-foreground">{{ statictranslations('Pre-compiled production bundles loaded with OKLCH theme.') }}</div>
+                    </div>
+                </li>
+
+                <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 rounded-full {{ $metrics['settings_configured'] ? 'bg-green-500/15 text-green-500' : 'bg-primary/15 text-primary' }} flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="fa-solid {{ $metrics['settings_configured'] ? 'fa-check' : 'fa-arrow-right' }} text-[10px]"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <div class="text-xs font-semibold text-foreground flex items-center justify-between">
+                            <span>{{ statictranslations('Site Identity & Contacts') }}</span>
+                            @if (Route::has('admin.settings.index'))
+                                <a href="{{ route('admin.settings.index') }}" class="text-[11px] text-primary hover:underline font-normal">{{ statictranslations('Edit') }}</a>
+                            @endif
+                        </div>
+                        <div class="text-[11px] text-muted-foreground">{{ statictranslations('Set brand name, phone, address, and social links.') }}</div>
+                    </div>
+                </li>
+
+                <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <div class="text-xs font-semibold text-foreground flex items-center justify-between">
+                            <span>{{ statictranslations('Create Team Accounts') }}</span>
+                            @if (Route::has('admin.users.index'))
+                                <a href="{{ route('admin.users.index') }}" class="text-[11px] text-primary hover:underline font-normal">{{ statictranslations('Manage') }}</a>
+                            @endif
+                        </div>
+                        <div class="text-[11px] text-muted-foreground">{{ statictranslations('Add custom administrator users and assign scoped roles.') }}</div>
+                    </div>
+                </li>
+            </ul>
+
+            <div class="pt-3 border-t border-border/70 text-[11px] text-muted-foreground flex items-center justify-between">
+                <span>{{ statictranslations('Framework Version:') }}</span>
+                <span class="font-mono text-foreground font-semibold">Laravel {{ $metrics['laravel_version'] }}</span>
+            </div>
+        </div>
+
+        {{-- Module Launchpad Grid (2 Cols) --}}
+        <div class="lg:col-span-2 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-sm text-foreground flex items-center gap-2">
+                        <i class="fa-solid fa-cubes text-primary text-xs"></i>
+                        <span>{{ statictranslations('Installed Modules') }}</span>
+                    </h3>
+                    <p class="text-[11px] text-muted-foreground">{{ statictranslations('Quick navigation across your modular admin components.') }}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                @foreach ($modules as $key => $mod)
+                    <div class="rounded-xl border border-border/80 bg-card p-4 hover:border-primary/40 transition-all duration-200 shadow-2xs flex flex-col justify-between gap-3">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs">
+                                        <i class="{{ $mod['icon'] }}"></i>
+                                    </div>
+                                    <span class="text-xs font-bold text-foreground">{{ $mod['name'] }}</span>
+                                </div>
+                                <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                    {{ statictranslations('Active') }}
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
+                                {{ $mod['description'] }}
+                            </p>
+                        </div>
+
+                        <div class="pt-2 border-t border-border/50 flex items-center justify-between">
+                            <span class="text-[10px] font-mono text-muted-foreground uppercase">{{ $key }}</span>
+                            @if (!empty($mod['route']) && Route::has($mod['route']))
+                                <a href="{{ route($mod['route']) }}" class="text-[11px] font-semibold text-primary hover:text-brand-green-hover flex items-center gap-1 transition-colors">
+                                    <span>{{ statictranslations('Open') }}</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                            @else
+                                <span class="text-[10px] text-muted-foreground/60 italic">{{ statictranslations('Embedded component') }}</span>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

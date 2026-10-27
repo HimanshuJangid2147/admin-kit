@@ -254,6 +254,9 @@ class InstallCommand extends Command
             '@tiptap/core' => '^2.10.3',
             '@tiptap/starter-kit' => '^2.10.3',
             '@tiptap/extension-table' => '^2.10.3',
+            '@tiptap/extension-table-row' => '^2.10.3',
+            '@tiptap/extension-table-header' => '^2.10.3',
+            '@tiptap/extension-table-cell' => '^2.10.3',
             '@tiptap/extension-bubble-menu' => '^2.10.3',
             'quill' => '^2.0.3',
         ];
@@ -428,6 +431,21 @@ class InstallCommand extends Command
             if (in_array('rbac', $moduleNames, true) && file_exists(database_path('seeders/AdminPermissionSeeder.php'))) {
                 $this->components->info('Seeding admin roles & permissions...');
                 $this->call('db:seed', ['--class' => 'AdminPermissionSeeder', '--force' => true]);
+            }
+
+            if (in_array('settings', $moduleNames, true) && class_exists(\App\Models\Setting::class) && \Illuminate\Support\Facades\Schema::hasTable('site_settings')) {
+                \App\Models\Setting::firstOrCreate(
+                    ['id' => 1],
+                    [
+                        'site_quote' => ['en' => 'Welcome to '.config('app.name', 'Admin Studio')],
+                        'address' => 'Corporate Headquarters',
+                        'std_code' => '+1',
+                        'phone' => '555-0199',
+                        'email' => 'admin@example.com',
+                        'is_maintenance' => false,
+                    ]
+                );
+                $this->components->twoColumnDetail('Site Settings', '<fg=green>default settings initialized</>');
             }
         }
     }

@@ -11,11 +11,13 @@
         "app/Navigation/core.php.stub": "app/Navigation/core.php",
         "app/Http/Requests/Admin/AdminRequest.php.stub": "app/Http/Requests/Admin/AdminRequest.php",
         "app/Services/TranslationService.php.stub": "app/Services/TranslationService.php",
+        "app/Http/Controllers/Admin/DashboardController.php.stub": "app/Http/Controllers/Admin/DashboardController.php",
         "app/Http/Controllers/Admin/TranslationController.php.stub": "app/Http/Controllers/Admin/TranslationController.php",
         "app/Http/Requests/Admin/Translate/TranslationsRequest.php.stub": "app/Http/Requests/Admin/Translate/TranslationsRequest.php",
         "app/Providers/AdminViewServiceProvider.php.stub": "app/Providers/AdminViewServiceProvider.php",
         "routes/admin.php.stub": "routes/admin.php",
         "resources/views/layouts/app.blade.php.stub": "resources/views/layouts/app.blade.php",
+        "resources/views/pages/dashboard/index.blade.php.stub": "resources/views/pages/dashboard/index.blade.php",
         "resources/views/partials/header.blade.php.stub": "resources/views/partials/header.blade.php",
         "resources/views/partials/sidebar.blade.php.stub": "resources/views/partials/sidebar.blade.php",
         "resources/views/partials/footer.blade.php.stub": "resources/views/partials/footer.blade.php",
@@ -41,7 +43,8 @@
         "public/build/assets/instrument-sans-500-normal-Dk9ku72i.woff2.stub": "public/build/assets/instrument-sans-500-normal-Dk9ku72i.woff2",
         "public/build/assets/instrument-sans-500-normal-Z6ESRlEs.woff.stub": "public/build/assets/instrument-sans-500-normal-Z6ESRlEs.woff",
         "public/build/assets/instrument-sans-600-normal-B7fBEWYG.woff2.stub": "public/build/assets/instrument-sans-600-normal-B7fBEWYG.woff2",
-        "public/build/assets/instrument-sans-600-normal-B9e8oLYv.woff.stub": "public/build/assets/instrument-sans-600-normal-B9e8oLYv.woff"
+        "public/build/assets/instrument-sans-600-normal-B9e8oLYv.woff.stub": "public/build/assets/instrument-sans-600-normal-B9e8oLYv.woff",
+        "public/icons/favicon.svg.stub": "public/icons/favicon.svg"
     },
     "migrations": {},
     "env": {

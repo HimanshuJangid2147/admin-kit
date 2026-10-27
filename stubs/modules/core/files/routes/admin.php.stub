@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\TranslationController;
 use Illuminate\Support\Facades\Route;
 
@@ -7,16 +8,7 @@ Route::middleware(['web'])
     ->prefix(config('admin.route_prefix', 'admin'))
     ->name(config('admin.route_name_prefix', 'admin.'))
     ->group(function () {
-        Route::get('/', function () {
-            if (Route::has('admin.settings.index')) {
-                return redirect()->route('admin.settings.index');
-            }
-            if (Route::has('admin.roles.index')) {
-                return redirect()->route('admin.roles.index');
-            }
-
-            return view('layouts.app');
-        })->name('dashboard');
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::post('translations/auto-fill', [TranslationController::class, 'autoFill'])->name('translations.auto-fill');
 

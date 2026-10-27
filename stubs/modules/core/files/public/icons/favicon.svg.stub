@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="adminKitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#adminKitGrad)" />
+  <path d="M32 14 L46 22 L46 36 C46 44 39 50 32 53 C25 50 18 44 18 36 L18 22 Z" fill="#ffffff" fill-opacity="0.95" />
+  <circle cx="32" cy="30" r="5" fill="#4f46e5" />
+  <path d="M25 42 C25 38 28 36 32 36 C36 36 39 38 39 42 Z" fill="#4f46e5" />
+</svg>

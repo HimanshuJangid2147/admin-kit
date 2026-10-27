@@ -752,29 +752,5 @@
         </div>
     </div>
 
-    {{-- Initial Create Site Settings Modal Popup --}}
-    @if ($showCreateModal ?? false)
-    <div id="init-settings-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
-        <div class="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-8 space-y-6 text-center animate-in fade-in zoom-in-95 duration-300">
-            <div class="w-16 h-16 rounded-full border border-primary/30 bg-primary/10 flex items-center justify-center text-primary mx-auto">
-                <i class="fa-solid fa-sliders-horizontal w-8 h-8"></i>
-            </div>
-
-            <div class="space-y-2">
-                <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Site Settings Not Created') }}</h3>
-                <p class="font-sans text-xs text-muted-foreground font-light leading-relaxed">
-                    {{ statictranslations('No site settings record found in the database. Click below to initialize site settings.') }}
-                </p>
-            </div>
-
-            <button type="button" id="create-site-settings-btn" data-url="{{ route('admin.settings.initialize') }}"
-                class="w-full py-3 bg-primary text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] hover:bg-brand-green-hover transition-colors duration-200 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2 font-bold">
-                <i class="fa-solid fa-plus-circle h-4 w-4"></i>
-                {{ statictranslations('Create Site Settings') }}
-            </button>
-        </div>
-    </div>
-    @endif
-
 </div>
 @endsection

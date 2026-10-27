@@ -1,0 +1,90 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+
+class DashboardController extends Controller
+{
+    /**
+     * Display the administration dashboard and setup control center.
+     */
+    public function index(Request $request)
+    {
+        $metrics = [
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'admins_count' => class_exists(\App\Models\Admin::class) && Schema::hasTable('admin_users')
+                ? \App\Models\Admin::count()
+                : 0,
+            'roles_count' => class_exists(\Spatie\Permission\Models\Role::class) && Schema::hasTable('roles')
+                ? \Spatie\Permission\Models\Role::count()
+                : 0,
+            'settings_configured' => class_exists(\App\Models\Setting::class) && Schema::hasTable('site_settings')
+                ? \App\Models\Setting::exists()
+                : false,
+            'banners_count' => class_exists(\App\Models\Banner::class) && Schema::hasTable('banners')
+                ? \App\Models\Banner::count()
+                : 0,
+            'theme' => config('admin.theme', 'slate-indigo'),
+            'locales' => config('admin.locales', ['en', 'ru', 'kk']),
+            'guard' => config('admin.guard', 'admin'),
+        ];
+
+        $modules = [
+            'rbac' => [
+                'name' => 'Access Control (RBAC)',
+                'description' => 'Role-based access control with Spatie permissions, super-admin bypass, and user management.',
+                'route' => 'admin.roles.index',
+                'icon' => 'fa-solid fa-shield-halved',
+                'active' => Schema::hasTable('roles'),
+            ],
+            'settings' => [
+                'name' => 'Site Settings',
+                'description' => 'Global contact info, phone with STD dial codes, social channels, and maintenance mode.',
+                'route' => 'admin.settings.index',
+                'icon' => 'fa-solid fa-sliders',
+                'active' => Schema::hasTable('site_settings'),
+            ],
+            'banners' => [
+                'name' => 'Hero Banners',
+                'description' => 'Hero banner management for target pages with trilingual text and image uploads.',
+                'route' => 'admin.banners.index',
+                'icon' => 'fa-solid fa-images',
+                'active' => Schema::hasTable('banners'),
+            ],
+            'uploads' => [
+                'name' => 'Staged Uploads',
+                'description' => 'Direct and chunked staged file uploader with automated daily cleanup command.',
+                'route' => null,
+                'icon' => 'fa-solid fa-cloud-arrow-up',
+                'active' => Schema::hasTable('upload_stagings'),
+            ],
+            'notifications' => [
+                'name' => 'Notification Drawer',
+                'description' => 'Pusher broadcasting, Web Audio synthesizer chime fallback, and unread badges.',
+                'route' => null,
+                'icon' => 'fa-solid fa-bell',
+                'active' => Schema::hasTable('admin_notifications'),
+            ],
+            'seo_drawer' => [
+                'name' => 'SEO Studio',
+                'description' => 'Slide-over SEO drawer with multilingual Google SERP previews and metadata extractor.',
+                'route' => null,
+                'icon' => 'fa-solid fa-magnifying-glass-chart',
+                'active' => true,
+            ],
+            'document_studio' => [
+                'name' => 'Document Studio',
+                'description' => 'TipTap rich text & table editor for legal and policy documents with clean HTML exporter.',
+                'route' => null,
+                'icon' => 'fa-solid fa-file-pen',
+                'active' => true,
+            ],
+        ];
+
+        return view('pages.dashboard.index', compact('metrics', 'modules'));
+    }
+}

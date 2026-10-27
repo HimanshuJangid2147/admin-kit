@@ -21,8 +21,12 @@ class SettingsController extends Controller
     public function index(SettingsService $settingsService)
     {
         try {
+            if (! $settingsService->checkSettingsExists()) {
+                $settingsService->initializeSettings();
+            }
+
             $settings = $settingsService->getSettings();
-            $showCreateModal = ! $settingsService->checkSettingsExists();
+            $showCreateModal = false;
 
             $sitemapBanner = null;
             if (interface_exists('App\Repositories\Admin\Interface\BannerRepositoryInterface') && app()->bound('App\Repositories\Admin\Interface\BannerRepositoryInterface')) {
