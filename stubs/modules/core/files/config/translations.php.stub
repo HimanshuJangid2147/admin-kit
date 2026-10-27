@@ -1,0 +1,8 @@
+<?php
+
+return [
+    'default_locale' => env('ADMIN_DEFAULT_LOCALE', 'en'),
+    'supported_locales' => array_filter(array_map('trim', explode(',', env('ADMIN_LOCALES', 'en,ru,kk')))),
+    'auto_translate' => env('ADMIN_AUTO_TRANSLATE', true),
+    'fallback_locale' => env('ADMIN_DEFAULT_LOCALE', 'en'),
+];

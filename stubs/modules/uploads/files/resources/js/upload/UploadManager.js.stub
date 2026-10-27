@@ -1,0 +1,262 @@
+import { QueueManager } from './QueueManager.js';
+import { ProgressManager } from './ProgressManager.js';
+import { UploadApi } from './Api.js';
+
+export class UploadManager {
+    constructor(element) {
+        this.element = element;
+        this.input = element.querySelector('.staged-file-input');
+        this.dropZone = element.querySelector('.staged-drop-zone');
+        this.hiddenContainer = element.querySelector('.staged-hidden-inputs');
+        this.progressContainer = element.querySelector('.staged-progress-container');
+
+        const concurrency = parseInt(element.dataset.concurrent || '3', 10);
+        const chunkSizeMB = parseFloat(element.dataset.chunkSizeMb || '2');
+        this.chunkSize = chunkSizeMB * 1024 * 1024;
+        this.name = element.dataset.name || 'staged_uploads[]';
+        this.altName = element.dataset.altName || null;
+        this.profile = element.dataset.profile || 'image';
+
+        this.isMultiple = element.dataset.multiple === 'true' || this.input?.hasAttribute('multiple');
+
+        this.api = new UploadApi();
+        this.queueManager = new QueueManager(concurrency, 2, this.api);
+        this.progressManager = new ProgressManager(this.progressContainer, this.isMultiple);
+
+        this.init();
+    }
+
+    /**
+     * Clean raw filename into a human-readable alt text string.
+     * e.g. "vecteezy_autumn-leaves-lake_36221797.jpg" -> "Autumn Leaves Lake"
+     */
+    deriveAltText(filename) {
+        if (!filename) return '';
+        // 1. Remove file extension
+        let name = filename.replace(/\.[^/.]+$/, '');
+        // 2. Remove common stock image prefixes (vecteezy_, freepik_, stock_, img_, photo_)
+        name = name.replace(/^(vecteezy|freepik|stock|img|photo|image|dsc|px)[_\-\s]+/i, '');
+        // 3. Remove trailing numeric IDs (e.g. _36221797 or -129381)
+        name = name.replace(/[_\-\s]+\d+$/, '');
+        // 4. Convert underscores, hyphens, pluses, dots to spaces
+        name = name.replace(/[_\-\+\.]+/g, ' ');
+        // 5. Trim & capitalize words
+        return name
+            .trim()
+            .split(/\s+/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
+
+    init() {
+        this.queueManager.onQueueUpdate = (queue) => {
+            this.progressManager.render(queue);
+            this.updateHiddenInputs(queue);
+
+            if (!this.isMultiple) {
+                const parentGroup = this.element.closest('.flex-col') || this.element.parentElement;
+                const staticBannerPreview = parentGroup ? parentGroup.querySelector('#banner-preview-container') : document.getElementById('banner-preview-container');
+                if (queue.length > 0) {
+                    if (this.dropZone) this.dropZone.classList.add('hidden');
+                    if (staticBannerPreview) staticBannerPreview.classList.add('hidden');
+                } else {
+                    if (this.dropZone) this.dropZone.classList.remove('hidden');
+                    if (staticBannerPreview) staticBannerPreview.classList.remove('hidden');
+                }
+            }
+        };
+
+        if (this.dropZone) {
+            ['dragenter', 'dragover'].forEach((eventName) => {
+                this.dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.dropZone.classList.add('border-amber-500', 'bg-amber-500/5');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach((eventName) => {
+                this.dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.dropZone.classList.remove('border-amber-500', 'bg-amber-500/5');
+                });
+            });
+
+            this.dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer?.files;
+                if (files && files.length > 0) {
+                    this.handleFiles(files);
+                }
+            });
+        }
+
+        if (this.input) {
+            this.input.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    this.handleFiles(e.target.files);
+                    setTimeout(() => {
+                        e.target.value = '';
+                    }, 100);
+                }
+            });
+        }
+
+        // Element-scoped Event Delegation for retry/cancel/remove buttons
+        if (this.element) {
+            this.element.addEventListener('click', (e) => {
+                const retryBtn = e.target.closest('.btn-retry-upload');
+                if (retryBtn) {
+                    const id = retryBtn.dataset.id;
+                    this.queueManager.retryItem(id);
+                }
+
+                const cancelBtn = e.target.closest('.btn-cancel-upload');
+                if (cancelBtn) {
+                    const id = cancelBtn.dataset.id;
+                    this.queueManager.cancelItem(id);
+                }
+
+                const removeBtn = e.target.closest('.btn-remove-upload');
+                if (removeBtn) {
+                    const id = removeBtn.dataset.id;
+                    this.queueManager.removeItem(id);
+                }
+            });
+
+            // Listen for user alt text edits on staged upload preview cards
+            this.element.addEventListener('input', (e) => {
+                if (e.target && e.target.classList.contains('staged-alt-input')) {
+                    const itemId = e.target.dataset.id;
+                    const queue = this.queueManager.queue;
+                    const item = queue.find(i => i.id === itemId);
+                    if (item) {
+                        item.userAltText = e.target.value;
+                        this.updateHiddenInputs(queue);
+                    }
+                }
+            });
+        }
+    }
+
+    handleFiles(files) {
+        const fileList = Array.from(files);
+        if (!this.isMultiple) {
+            // For single upload fields, cancel/clear existing queue items before adding the new file
+            this.queueManager.clearQueue();
+            const file = fileList[0];
+            if (file) {
+                this.queueManager.addFile(file, this.chunkSize, this.profile);
+            }
+        } else {
+            fileList.forEach((file) => {
+                this.queueManager.addFile(file, this.chunkSize, this.profile);
+            });
+        }
+    }
+
+    updateHiddenInputs(queue) {
+        if (!this.hiddenContainer) return;
+
+        const completedItems = queue
+            .filter((item) => item.status === 'completed' && item.result?.uuid);
+
+        let html = completedItems
+            .map((item) => `<input type="hidden" name="${this.name}" value="${item.result.uuid}">`)
+            .join('');
+
+        if (this.altName) {
+            html += completedItems
+                .map((item) => {
+                    const altVal = item.userAltText !== undefined ? item.userAltText : this.deriveAltText(item.file?.name || item.result?.original_name || '');
+                    return `<input type="hidden" name="${this.altName}" value="${altVal}">`;
+                })
+                .join('');
+        }
+
+        this.hiddenContainer.innerHTML = html;
+        this.hiddenContainer.dispatchEvent(new CustomEvent('staged-input-updated', { bubbles: true }));
+    }
+
+    reset() {
+        if (this.queueManager) {
+            this.queueManager.clearQueue();
+        }
+        if (this.hiddenContainer) {
+            this.hiddenContainer.innerHTML = '';
+            this.hiddenContainer.dispatchEvent(new CustomEvent('staged-input-updated', { bubbles: true }));
+        }
+        if (this.progressContainer) {
+            this.progressContainer.innerHTML = '';
+        }
+        if (this.dropZone) {
+            this.dropZone.classList.remove('hidden');
+        }
+        if (this.input) {
+            this.input.value = '';
+        }
+    }
+
+    static initAll(root = document) {
+        root.querySelectorAll('.staged-uploader-widget').forEach((widget) => {
+            if (!widget._uploadManagerInstance) {
+                widget._uploadManagerInstance = new UploadManager(widget);
+            }
+        });
+    }
+}
+
+// Global Delegation for drop zones and inputs dynamically added or revealed in hidden tabs
+document.addEventListener('click', (e) => {
+    const dropZone = e.target.closest('.staged-drop-zone');
+    if (dropZone) {
+        const widget = dropZone.closest('.staged-uploader-widget');
+        if (widget) {
+            if (!widget._uploadManagerInstance) {
+                widget._uploadManagerInstance = new UploadManager(widget);
+            }
+            const input = widget.querySelector('.staged-file-input');
+            if (input && e.target !== input) {
+                input.click();
+            }
+        }
+    }
+});
+// A gallery upload is asynchronous. Do not submit the parent form until every
+// staged file has produced its UUID hidden input.
+document.addEventListener('submit', (e) => {
+    const widgets = Array.from(e.target.querySelectorAll('.staged-uploader-widget'));
+    widgets.forEach((widget) => {
+        if (!widget._uploadManagerInstance) {
+            widget._uploadManagerInstance = new UploadManager(widget);
+        }
+        if (widget._uploadManagerInstance.queueManager.queue.length > 0) {
+            widget._uploadManagerInstance.updateHiddenInputs(widget._uploadManagerInstance.queueManager.queue);
+        }
+    });
+    const uploads = widgets.flatMap((widget) => widget._uploadManagerInstance?.queueManager.queue ?? []);
+    const pending = uploads.some((item) => item.status === 'queued' || item.status === 'uploading');
+    const failed = uploads.some((item) => item.status === 'failed');
+
+    if (!pending && !failed) return;
+
+    e.preventDefault();
+
+    const tPending = typeof window.trans === 'function' ? window.trans('Please wait for all gallery images to finish uploading.') : 'Please wait for all gallery images to finish uploading.';
+    const tFailed = typeof window.trans === 'function' ? window.trans('Please retry or remove failed gallery image uploads before saving.') : 'Please retry or remove failed gallery image uploads before saving.';
+
+    const message = pending ? tPending : tFailed;
+
+    if (window.Toast) {
+        window.Toast.fire({ icon: 'warning', html: message });
+    } else {
+        window.alert(message);
+    }
+});
+
+// Auto-initialize uploader instances on document ready
+document.addEventListener('DOMContentLoaded', () => {
+    UploadManager.initAll();
+});
+
+window.UploadManager = UploadManager;

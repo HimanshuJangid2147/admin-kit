@@ -1,0 +1,23 @@
+@php
+    $t = fn ($text) => function_exists('statictranslations') ? statictranslations($text) : __($text);
+@endphp
+
+<nav class="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+    @foreach ($navGroups as $groupLabel => $items)
+        <div>
+            <p class="px-2 pb-2 text-[9px] uppercase tracking-widest text-sidebar-foreground/40 font-bold">
+                {{ $t($groupLabel) }}
+            </p>
+            <div class="space-y-0.5">
+                @foreach ($items as $item)
+                    @php $isActive = request()->routeIs($item['active'] ?? $item['route']); @endphp
+                    <a href="{{ $item['url'] }}"
+                       class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors duration-200 {{ $isActive ? 'bg-primary/10 text-primary font-semibold' : 'text-sidebar-foreground/70 hover:bg-muted/50 hover:text-foreground' }}">
+                        <i class="{{ $item['icon'] ?? 'fa-solid fa-circle' }} w-4 h-4 shrink-0"></i>
+                        <span class="truncate">{{ $t($item['label']) }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endforeach
+</nav>

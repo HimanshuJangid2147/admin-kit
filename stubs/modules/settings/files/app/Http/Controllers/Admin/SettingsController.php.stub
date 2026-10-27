@@ -1,0 +1,223 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Setting\FooterPdfSettingRequest;
+use App\Http\Requests\Admin\Setting\MaintenanceModeRequest;
+use App\Http\Requests\Admin\Setting\SiteContentSettingRequest;
+use App\Http\Requests\Admin\Setting\SiteSeoSettingRequest;
+use App\Http\Requests\Admin\Setting\SocialMediaSettingRequest;
+use App\Services\SettingsService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class SettingsController extends Controller
+{
+    /**
+     * Display the site settings tabbed view.
+     */
+    public function index(SettingsService $settingsService)
+    {
+        try {
+            $settings = $settingsService->getSettings();
+            $showCreateModal = ! $settingsService->checkSettingsExists();
+
+            $sitemapBanner = null;
+            if (interface_exists('App\Repositories\Admin\Interface\BannerRepositoryInterface') && app()->bound('App\Repositories\Admin\Interface\BannerRepositoryInterface')) {
+                $bannerRepository = app('App\Repositories\Admin\Interface\BannerRepositoryInterface');
+                $sitemapBanner = $bannerRepository->findByPage('sitemap');
+            }
+
+            return view('pages.settings.index', compact('settings', 'showCreateModal', 'sitemapBanner'));
+        } catch (\Throwable $e) {
+            Log::error('Failed to load site settings: '.$e->getMessage(), ['exception' => $e]);
+
+            return back()->withErrors(['error' => statictranslations('An unexpected error occurred while loading settings.')]);
+        }
+    }
+
+    /**
+     * Initialize Site Settings record with default values via AJAX.
+     */
+    public function initializeSettings(SettingsService $settingsService): JsonResponse
+    {
+        try {
+            $settingsService->initializeSettings();
+
+            return response()->json([
+                'success' => true,
+                'message' => statictranslations('Site settings initialized successfully.'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to initialize site settings: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('An unexpected error occurred while initializing settings.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Site Content Settings via AJAX.
+     */
+    public function updateSiteContent(SiteContentSettingRequest $request, SettingsService $settingsService): JsonResponse
+    {
+        try {
+            $settingsService->updateSiteContent($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => statictranslations('Site content settings updated successfully.'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update site content settings: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('An unexpected error occurred while updating settings.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Social Media Settings via AJAX.
+     */
+    public function updateSocialMedia(SocialMediaSettingRequest $request, SettingsService $settingsService): JsonResponse
+    {
+        try {
+            $settingsService->updateSocialMedia($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => statictranslations('Social media links updated successfully.'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update social media settings: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('An unexpected error occurred while updating settings.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Footer PDF Settings via AJAX.
+     */
+    public function updateFooterPdfs(FooterPdfSettingRequest $request, SettingsService $settingsService): JsonResponse
+    {
+        try {
+            $settingsService->updateFooterPdfs($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => statictranslations('Footer PDF documents updated successfully.'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update footer PDFs settings: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('An unexpected error occurred while updating settings.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Check if Maintenance Mode is enabled via AJAX.
+     */
+    public function checkMaintenanceMode(SettingsService $settingsService): JsonResponse
+    {
+        try {
+            $isMaintenanceMode = $settingsService->getMaintenanceMode();
+
+            return response()->json([
+                'success' => true,
+                'maintenance_mode' => $isMaintenanceMode,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to check maintenance mode: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('An unexpected error occurred while checking maintenance mode.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Site SEO Settings via AJAX.
+     */
+    public function updateSiteSeo(SiteSeoSettingRequest $request, SettingsService $settingsService): JsonResponse
+    {
+        try {
+            $settingsService->updateSiteSeo($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => statictranslations('Site SEO settings updated successfully.'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update site SEO settings: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('An unexpected error occurred while updating settings.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Notification Sound file via AJAX.
+     */
+    public function updateNotificationSound(Request $request, SettingsService $settingsService): JsonResponse
+    {
+        try {
+            $request->validate([
+                'notification_sound' => 'nullable',
+            ]);
+
+            $settingsService->updateNotificationSound($request->only('notification_sound'));
+
+            return response()->json([
+                'success' => true,
+                'message' => statictranslations('Notification sound updated successfully.'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update notification sound: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('An unexpected error occurred while updating notification sound.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Toggle Maintenance Mode status via AJAX.
+     */
+    public function toggleMaintenanceMode(MaintenanceModeRequest $request, SettingsService $settingsService): JsonResponse
+    {
+        try {
+            $status = $settingsService->maintenanceModeToggle($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'maintenance_mode' => $status,
+                'message' => $status
+                    ? statictranslations('Maintenance mode enabled. Public site is now offline.')
+                    : statictranslations('Maintenance mode disabled. Public site is now live.'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to toggle maintenance mode: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('An unexpected error occurred while toggling maintenance mode.'),
+            ], 500);
+        }
+    }
+}

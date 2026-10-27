@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Http\Requests\Admin\UserManagement;
+
+use App\Http\Requests\Admin\AdminRequest;
+use App\Models\Admin;
+
+class EditAdminRequest extends AdminRequest
+{
+    protected function targetTable(): string
+    {
+        return 'admin_users';
+    }
+
+    public function authorize(): bool
+    {
+        $admin = $this->adminUser();
+        if (! $admin || ! $admin->can('user.update')) {
+            return false;
+        }
+
+        $id = $this->resolveId();
+        if (! $id) {
+            return true;
+        }
+
+        $targetUser = Admin::find($id);
+        if (! $targetUser) {
+            return true;
+        }
+
+        if ($targetUser->hasRole('super-admin') && ! $admin->hasRole('super-admin')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return $this->idRules();
+    }
+}

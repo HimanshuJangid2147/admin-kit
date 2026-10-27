@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Services;
+
+use App\Repositories\Admin\Interface\BannerRepositoryInterface;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+
+class BannerService
+{
+    public function __construct(
+        protected BannerRepositoryInterface $bannerRepository,
+        protected UploadStagingService $uploadStagingService
+    ) {}
+
+    public function handleBannerUpsert(array $data)
+    {
+        try {
+            $existingBanner = $this->bannerRepository->findByPage($data['for_page']);
+            $disk = config('admin.uploads.disk', 'public');
+
+            // Auto-Translation performed in Service layer for trilingual EN/RU/KK
+            $data = auto_translate($data, ['eyebrow_text', 'title', 'description']);
+
+            $dbData = [
+                'eyebrow_text' => $data['eyebrow_text'] ?? null,
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+            ];
+
+            if (isset($data['image'])) {
+                if ($data['image'] instanceof UploadedFile) {
+                    if ($existingBanner && ! empty($existingBanner->image)) {
+                        Storage::disk($disk)->delete($existingBanner->image);
+                    }
+                    $dbData['image'] = Storage::disk($disk)->put('banners', $data['image']);
+                } elseif (is_string($data['image']) && $stagedPath = $this->uploadStagingService->commitUpload($data['image'], 'banners')) {
+                    if ($existingBanner && ! empty($existingBanner->image)) {
+                        Storage::disk($disk)->delete($existingBanner->image);
+                    }
+                    $dbData['image'] = $stagedPath;
+                }
+            }
+
+            return $this->bannerRepository->upsertByPage($data['for_page'], $dbData);
+        } catch (\Exception $e) {
+            Log::error('Error in BannerService@handleBannerUpsert: '.$e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+}

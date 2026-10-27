@@ -1,0 +1,49 @@
+@props([
+    'type' => 'info',
+    'message' => null,
+])
+
+@php
+    $classes = [
+        'success' => [
+            'bg' => 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
+            'icon' => 'fa-circle-check',
+            'iconColor' => 'text-emerald-600 dark:text-emerald-400',
+        ],
+        'info' => [
+            'bg' => 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400',
+            'icon' => 'fa-circle-info',
+            'iconColor' => 'text-blue-600 dark:text-blue-400',
+        ],
+        'warning' => [
+            'bg' => 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400',
+            'icon' => 'fa-triangle-exclamation',
+            'iconColor' => 'text-amber-600 dark:text-amber-400',
+        ],
+        'error' => [
+            'bg' => 'bg-destructive/10 border-destructive/30 text-destructive',
+            'icon' => 'fa-circle-exclamation',
+            'iconColor' => 'text-destructive',
+        ],
+        'danger' => [
+            'bg' => 'bg-destructive/10 border-destructive/30 text-destructive',
+            'icon' => 'fa-circle-exclamation',
+            'iconColor' => 'text-destructive',
+        ],
+    ][$type] ?? [
+        'bg' => 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400',
+        'icon' => 'fa-circle-info',
+        'iconColor' => 'text-blue-600 dark:text-blue-400',
+    ];
+@endphp
+
+<div class="alert-box flex items-start justify-between gap-3 p-4 rounded-xl border {{ $classes['bg'] }} transition-all duration-300 shadow-sm" role="alert">
+    <div class="flex gap-3 items-start">
+        <div class="shrink-0 mt-0.5">
+            <i class="fa-solid {{ $classes['icon'] }} h-5 w-5 {{ $classes['iconColor'] }}"></i>
+        </div>
+        <div class="text-sm font-medium leading-relaxed font-sans">
+            {{ $message ?? $slot }}
+        </div>
+    </div>
+</div>

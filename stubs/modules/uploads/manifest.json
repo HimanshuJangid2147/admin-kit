@@ -1,0 +1,48 @@
+{
+    "name": "uploads",
+    "description": "Direct and chunked staged file uploader with image processing and automated cleanup schedule",
+    "requires": ["core"],
+    "files": {
+        "app/Console/Commands/CleanStagedUploadsCommand.php.stub": "app/Console/Commands/CleanStagedUploadsCommand.php",
+        "app/Helpers/upload.php.stub": "app/Helpers/upload.php",
+        "app/Http/Controllers/Admin/UploadController.php.stub": "app/Http/Controllers/Admin/UploadController.php",
+        "app/Http/Requests/Admin/ChunkUploadRequest.php.stub": "app/Http/Requests/Admin/ChunkUploadRequest.php",
+        "app/Http/Requests/Admin/CompleteChunkUploadRequest.php.stub": "app/Http/Requests/Admin/CompleteChunkUploadRequest.php",
+        "app/Http/Requests/Admin/DirectUploadRequest.php.stub": "app/Http/Requests/Admin/DirectUploadRequest.php",
+        "app/Http/Requests/Concerns/HasImageValidation.php.stub": "app/Http/Requests/Concerns/HasImageValidation.php",
+        "app/Models/UploadStaging.php.stub": "app/Models/UploadStaging.php",
+        "app/Providers/AdminUploadServiceProvider.php.stub": "app/Providers/AdminUploadServiceProvider.php",
+        "app/Repositories/Admin/Interface/UploadStagingRepositoryInterface.php.stub": "app/Repositories/Admin/Interface/UploadStagingRepositoryInterface.php",
+        "app/Repositories/Admin/Repositories/UploadStagingRepository.php.stub": "app/Repositories/Admin/Repositories/UploadStagingRepository.php",
+        "app/Services/ChunkService.php.stub": "app/Services/ChunkService.php",
+        "app/Services/ImageProcessorService.php.stub": "app/Services/ImageProcessorService.php",
+        "app/Services/UploadStagingService.php.stub": "app/Services/UploadStagingService.php",
+        "config/uploads.php.stub": "config/uploads.php",
+        "resources/js/upload/Api.js.stub": "resources/js/upload/Api.js",
+        "resources/js/upload/ChunkUploader.js.stub": "resources/js/upload/ChunkUploader.js",
+        "resources/js/upload/ProgressManager.js.stub": "resources/js/upload/ProgressManager.js",
+        "resources/js/upload/QueueManager.js.stub": "resources/js/upload/QueueManager.js",
+        "resources/js/upload/UploadManager.js.stub": "resources/js/upload/UploadManager.js",
+        "resources/js/upload/uuid.js.stub": "resources/js/upload/uuid.js",
+        "resources/views/components/admin/uploader.blade.php.stub": "resources/views/components/admin/uploader.blade.php",
+        "routes/admin/uploads.php.stub": "routes/admin/uploads.php"
+    },
+    "migrations": {
+        "database/migrations/create_upload_stagings_table.php.stub": "create_upload_stagings_table"
+    },
+    "providers": [
+        "App\\Providers\\AdminUploadServiceProvider"
+    ],
+    "env": {
+        "ADMIN_UPLOADS": "true",
+        "ADMIN_UPLOADS_DISK": "public"
+    },
+    "composer": [
+        "intervention/image-laravel"
+    ],
+    "npm": [],
+    "notes": [
+        "Run php artisan migrate to create the upload_stagings table.",
+        "Add $schedule->command('uploads:clean')->daily(); to routes/console.php."
+    ]
+}

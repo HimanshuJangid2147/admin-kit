@@ -1,0 +1,72 @@
+{
+    "name": "rbac",
+    "description": "Spatie roles and permissions: gate bypass for super-admin, permission seeder, full role & user management UI with DataTables",
+    "requires": ["core"],
+    "files": {
+        "app/Http/Controllers/Admin/RoleController.php.stub": "app/Http/Controllers/Admin/RoleController.php",
+        "app/Http/Controllers/Admin/UserManagementController.php.stub": "app/Http/Controllers/Admin/UserManagementController.php",
+        "app/Http/Requests/Admin/Role/DeleteRoleRequest.php.stub": "app/Http/Requests/Admin/Role/DeleteRoleRequest.php",
+        "app/Http/Requests/Admin/Role/EditRoleRequest.php.stub": "app/Http/Requests/Admin/Role/EditRoleRequest.php",
+        "app/Http/Requests/Admin/Role/ListRoleRequest.php.stub": "app/Http/Requests/Admin/Role/ListRoleRequest.php",
+        "app/Http/Requests/Admin/Role/ReadRoleRequest.php.stub": "app/Http/Requests/Admin/Role/ReadRoleRequest.php",
+        "app/Http/Requests/Admin/Role/StoreRoleRequest.php.stub": "app/Http/Requests/Admin/Role/StoreRoleRequest.php",
+        "app/Http/Requests/Admin/Role/UpdateRoleRequest.php.stub": "app/Http/Requests/Admin/Role/UpdateRoleRequest.php",
+        "app/Http/Requests/Admin/UserManagement/DeleteAdminRequest.php.stub": "app/Http/Requests/Admin/UserManagement/DeleteAdminRequest.php",
+        "app/Http/Requests/Admin/UserManagement/EditAdminRequest.php.stub": "app/Http/Requests/Admin/UserManagement/EditAdminRequest.php",
+        "app/Http/Requests/Admin/UserManagement/ListAdminRequest.php.stub": "app/Http/Requests/Admin/UserManagement/ListAdminRequest.php",
+        "app/Http/Requests/Admin/UserManagement/StoreAdminRequest.php.stub": "app/Http/Requests/Admin/UserManagement/StoreAdminRequest.php",
+        "app/Http/Requests/Admin/UserManagement/ToggleAdminStatusRequest.php.stub": "app/Http/Requests/Admin/UserManagement/ToggleAdminStatusRequest.php",
+        "app/Http/Requests/Admin/UserManagement/UpdateAdminRequest.php.stub": "app/Http/Requests/Admin/UserManagement/UpdateAdminRequest.php",
+        "app/Http/Requests/Admin/UserManagement/ViewAdminRequest.php.stub": "app/Http/Requests/Admin/UserManagement/ViewAdminRequest.php",
+        "app/Navigation/rbac.php.stub": "app/Navigation/rbac.php",
+        "app/Providers/AdminAuthServiceProvider.php.stub": "app/Providers/AdminAuthServiceProvider.php",
+        "app/Repositories/Admin/Interface/AdminRepositoryInterface.php.stub": "app/Repositories/Admin/Interface/AdminRepositoryInterface.php",
+        "app/Repositories/Admin/Interface/PermissionRepositoryInterface.php.stub": "app/Repositories/Admin/Interface/PermissionRepositoryInterface.php",
+        "app/Repositories/Admin/Interface/RoleRepositoryInterface.php.stub": "app/Repositories/Admin/Interface/RoleRepositoryInterface.php",
+        "app/Repositories/Admin/Repositories/AdminRepository.php.stub": "app/Repositories/Admin/Repositories/AdminRepository.php",
+        "app/Repositories/Admin/Repositories/PermissionRepository.php.stub": "app/Repositories/Admin/Repositories/PermissionRepository.php",
+        "app/Repositories/Admin/Repositories/RoleRepository.php.stub": "app/Repositories/Admin/Repositories/RoleRepository.php",
+        "app/Services/Admin/AdminService.php.stub": "app/Services/Admin/AdminService.php",
+        "database/seeders/AdminPermissionSeeder.php.stub": "database/seeders/AdminPermissionSeeder.php",
+        "resources/js/datatable.js.stub": "resources/js/datatable.js",
+        "resources/js/pages/roleForm.js.stub": "resources/js/pages/roleForm.js",
+        "resources/js/pages/roles.js.stub": "resources/js/pages/roles.js",
+        "resources/js/pages/userForm.js.stub": "resources/js/pages/userForm.js",
+        "resources/js/pages/users.js.stub": "resources/js/pages/users.js",
+        "resources/views/pages/admin/create.blade.php.stub": "resources/views/pages/admin/create.blade.php",
+        "resources/views/pages/admin/edit.blade.php.stub": "resources/views/pages/admin/edit.blade.php",
+        "resources/views/pages/admin/index.blade.php.stub": "resources/views/pages/admin/index.blade.php",
+        "resources/views/pages/admin/partials/checkbox.blade.php.stub": "resources/views/pages/admin/partials/checkbox.blade.php",
+        "resources/views/pages/admin/partials/countries.blade.php.stub": "resources/views/pages/admin/partials/countries.blade.php",
+        "resources/views/pages/admin/partials/roles.blade.php.stub": "resources/views/pages/admin/partials/roles.blade.php",
+        "resources/views/pages/admin/show.blade.php.stub": "resources/views/pages/admin/show.blade.php",
+        "resources/views/pages/roles/create.blade.php.stub": "resources/views/pages/roles/create.blade.php",
+        "resources/views/pages/roles/edit.blade.php.stub": "resources/views/pages/roles/edit.blade.php",
+        "resources/views/pages/roles/index.blade.php.stub": "resources/views/pages/roles/index.blade.php",
+        "resources/views/pages/roles/show.blade.php.stub": "resources/views/pages/roles/show.blade.php",
+        "resources/views/partials/datatable-actions.blade.php.stub": "resources/views/partials/datatable-actions.blade.php",
+        "resources/views/partials/datatable-permissionsList.blade.php.stub": "resources/views/partials/datatable-permissionsList.blade.php",
+        "resources/views/partials/datatable-status.blade.php.stub": "resources/views/partials/datatable-status.blade.php",
+        "resources/views/partials/image.blade.php.stub": "resources/views/partials/image.blade.php",
+        "routes/admin/rbac.php.stub": "routes/admin/rbac.php"
+    },
+    "migrations": {},
+    "providers": ["App\\Providers\\AdminAuthServiceProvider"],
+    "env": {
+        "ADMIN_RBAC": "true"
+    },
+    "composer": [
+        "spatie/laravel-permission",
+        "yajra/laravel-datatables-oracle"
+    ],
+    "npm": [
+        "jquery",
+        "datatables.net",
+        "datatables.net-dt",
+        "sweetalert2"
+    ],
+    "notes": [
+        "php artisan vendor:publish --provider=\"Spatie\\Permission\\PermissionServiceProvider\", then php artisan migrate.",
+        "Add the Spatie HasRoles trait to your User/Admin model and run: php artisan db:seed --class=AdminPermissionSeeder"
+    ]
+}

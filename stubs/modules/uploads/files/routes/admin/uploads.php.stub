@@ -1,0 +1,11 @@
+<?php
+
+use App\Http\Controllers\Admin\UploadController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('uploads')->name('uploads.')->group(function () {
+    Route::post('/', [UploadController::class, 'directUpload'])->name('direct');
+    Route::post('/chunks', [UploadController::class, 'chunkUpload'])->name('chunk');
+    Route::post('/chunks/complete', [UploadController::class, 'completeChunkUpload'])->name('complete');
+    Route::delete('/{uuid}', [UploadController::class, 'cancelUpload'])->name('cancel');
+});

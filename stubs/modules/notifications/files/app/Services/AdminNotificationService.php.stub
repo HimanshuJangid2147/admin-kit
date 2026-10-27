@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Services;
+
+use App\Events\AdminNotificationEvent;
+use App\Repositories\Admin\Interface\AdminNotificationRepositoryInterface as NotificationRepo;
+use Illuminate\Support\Facades\Log;
+
+class AdminNotificationService
+{
+    public function __construct(protected NotificationRepo $notificationRepo) {}
+
+    /**
+     * Store and broadcast a real-time admin notification.
+     *
+     * @param  array  $payload  [title, message, avatar, type, link, data]
+     */
+    public function notify(array $payload)
+    {
+        try {
+            // 1. Persist notification to database
+            $record = $this->notificationRepo->createNotification([
+                'title' => $payload['title'] ?? 'New Notification',
+                'message' => $payload['message'] ?? '',
+                'avatar' => $payload['avatar'] ?? 'ST',
+                'type' => $payload['type'] ?? 'info',
+                'link' => $payload['link'] ?? null,
+                'is_read' => false,
+                'data' => $payload['data'] ?? null,
+            ]);
+
+            $broadcastPayload = [
+                'id' => (string) $record->id,
+                'title' => $record->title,
+                'message' => $record->message,
+                'avatar' => $record->avatar,
+                'type' => $record->type,
+                'link' => $record->link,
+                'time' => 'Just now',
+                'is_read' => false,
+                'created_at' => optional($record->created_at)->toISOString() ?? now()->toISOString(),
+            ];
+
+            // 2. Broadcast securely via Pusher on private and public channels
+            event(new AdminNotificationEvent($broadcastPayload));
+
+            return $record;
+        } catch (\Exception $e) {
+            Log::warning('[AdminNotificationService] Failed to record or broadcast notification: '.$e->getMessage());
+
+            return null;
+        }
+    }
+}

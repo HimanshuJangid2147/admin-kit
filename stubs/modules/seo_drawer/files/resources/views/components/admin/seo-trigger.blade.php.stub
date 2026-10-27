@@ -1,0 +1,29 @@
+@props([
+    'model' => null,
+])
+
+@php
+    $hasSeo = false;
+    if ($model) {
+        $hasSeo = !empty($model->getTranslation('meta_title', 'en', false))
+            || !empty($model->getTranslation('meta_title', 'fr', false))
+            || !empty($model->getTranslation('meta_description', 'en', false))
+            || !empty($model->getTranslation('meta_description', 'fr', false));
+    }
+@endphp
+
+<button
+    type="button"
+    data-seo-drawer-trigger
+    title="{{ statictranslations('Search Engine Optimization (SEO)') }}"
+    aria-label="{{ statictranslations('SEO Settings') }}"
+    class="inline-flex items-center gap-2 h-9 px-3.5 rounded-xl border border-primary/40 bg-primary/5 text-primary hover:bg-primary/15 active:bg-primary/25 font-sans text-xs uppercase tracking-wider font-semibold transition-all duration-300 cursor-pointer shadow-sm relative group"
+>
+    <i class="fa-solid fa-magnifying-glass-chart h-3.5 w-3.5 group-hover:scale-110 transition-transform"></i>
+    <span>{{ statictranslations('SEO Settings') }}</span>
+    <span
+        data-seo-indicator
+        class="w-2 h-2 rounded-full bg-brand-orange shadow-sm {{ $hasSeo ? '' : 'hidden' }}"
+        title="{{ statictranslations('Custom SEO configured') }}"
+    ></span>
+</button>

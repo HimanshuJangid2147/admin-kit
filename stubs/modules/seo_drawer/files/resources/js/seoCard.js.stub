@@ -1,0 +1,402 @@
+// resources/js/seoCard.js
+
+document.addEventListener("DOMContentLoaded", () => {
+    const drawer = document.getElementById("seo-drawer");
+    const backdrop = document.getElementById("seo-drawer-backdrop");
+
+    // ── Helper: Extract Clean Plain Text from Input or Quill Editor ─────────
+    function getCleanTextFromElement(elem) {
+        if (!elem) return "";
+        // 1. Check Quill instance directly on element or Quill global registry
+        if (elem.quill && elem.quill.root) {
+            return elem.quill.getText().replace(/\s+/g, " ").trim();
+        }
+        if (window.Quill && window.Quill.find) {
+            const q = window.Quill.find(elem);
+            if (q && q.root) {
+                return q.getText().replace(/\s+/g, " ").trim();
+            }
+        }
+        // 2. Standard input / textarea / HTML value
+        const raw = elem.value || elem.textContent || "";
+        const tmp = document.createElement("div");
+        tmp.innerHTML = raw;
+        return (tmp.textContent || tmp.innerText || "").replace(/\s+/g, " ").trim();
+    }
+
+    // ── Open / Close Slide-Over Drawer ───────────────────────────────────────
+    function openDrawer() {
+        if (!drawer) return;
+        drawer.classList.remove("translate-x-full");
+        if (backdrop) {
+            backdrop.classList.remove("opacity-0", "pointer-events-none");
+            backdrop.classList.add("opacity-100");
+        }
+        document.body.style.overflow = "hidden";
+
+        // Auto-focus first visible title input
+        setTimeout(() => {
+            const activeInput = drawer.querySelector(".seo-tab-pane:not(.hidden) [data-seo-title]");
+            if (activeInput) {
+                activeInput.focus();
+            }
+        }, 100);
+    }
+
+    function closeDrawer() {
+        if (!drawer) return;
+        drawer.classList.add("translate-x-full");
+        if (backdrop) {
+            backdrop.classList.add("opacity-0", "pointer-events-none");
+            backdrop.classList.remove("opacity-100");
+        }
+        document.body.style.overflow = "";
+    }
+
+    // ── Helper: Get Currently Active Language in Drawer / Card ─────────────
+    function getActiveDrawerLang(card) {
+        const activeBtn = card?.querySelector("[data-seo-tab].bg-background");
+        return activeBtn?.getAttribute("data-seo-tab") || "en";
+    }
+
+    // ── Drawer Language Tabs Switching (EN, RU, KK) ─────────────────────────
+    function switchDrawerLang(lang) {
+        if (!drawer) return;
+
+        // Switch tab buttons styling
+        const tabBtns = drawer.querySelectorAll("[data-seo-tab]");
+        tabBtns.forEach((btn) => {
+            const isTarget = btn.getAttribute("data-seo-tab") === lang;
+            if (isTarget) {
+                btn.className = "seo-tab-btn px-3 py-1 rounded-lg text-xs font-sans uppercase tracking-wider font-semibold transition-all duration-300 bg-background text-foreground shadow-sm cursor-pointer";
+            } else {
+                btn.className = "seo-tab-btn px-3 py-1 rounded-lg text-xs font-sans uppercase tracking-wider font-semibold transition-all duration-300 text-muted-foreground hover:text-foreground cursor-pointer";
+            }
+        });
+
+        // Switch visible inputs (.seo-tab-pane)
+        const panes = drawer.querySelectorAll(".seo-tab-pane");
+        panes.forEach((pane) => {
+            if (pane.id.endsWith(`-${lang}`)) {
+                pane.classList.remove("hidden");
+            } else {
+                pane.classList.add("hidden");
+            }
+        });
+
+        updateSeoCountersAndPreview(drawer);
+    }
+
+    // ── Client-Side Auto-Generate from Page Content ──────────────────────────
+    function handleAutoGenerate(card) {
+        if (!card) return;
+        const activeLang = getActiveDrawerLang(card);
+
+        // 1. Locate name/title on the page for this language
+        const nameElem = document.getElementById(`name_${activeLang}`) ||
+                         document.getElementById(`title_${activeLang}`) ||
+                         document.querySelector(`[name="name[${activeLang}]"]`) ||
+                         document.querySelector(`[name="title[${activeLang}]"]`) ||
+                         document.querySelector(`[name="type[name][${activeLang}]"]`);
+
+        let pageName = getCleanTextFromElement(nameElem);
+        if (!pageName && activeLang !== "en") {
+            const enElem = document.getElementById("name_en") || document.getElementById("title_en") ||
+                           document.querySelector('[name="name[en]"]') || document.querySelector('[name="title[en]"]');
+            pageName = getCleanTextFromElement(enElem);
+        }
+
+        // 2. Locate description on the page for this language
+        const descElem = document.getElementById(`short_description_${activeLang}`) ||
+                         document.getElementById(`description_${activeLang}`) ||
+                         document.querySelector(`[name="short_description[${activeLang}]"]`) ||
+                         document.querySelector(`[name="description[${activeLang}]"]`) ||
+                         document.querySelector(`[name="type[description][${activeLang}]"]`);
+
+        let pageDesc = getCleanTextFromElement(descElem);
+        if (!pageDesc && activeLang !== "en") {
+            const enDescElem = document.getElementById("short_description_en") || document.getElementById("description_en") ||
+                               document.querySelector('[name="short_description[en]"]') || document.querySelector('[name="description[en]"]');
+            pageDesc = getCleanTextFromElement(enDescElem);
+        }
+
+        if (!pageName && !pageDesc) {
+            if (window.Toast) {
+                window.Toast.fire({
+                    icon: "info",
+                    title: window.translations?.["Please provide a Name or Description in the form first."] || "Please provide a Name or Description in the form first."
+                });
+            }
+            return;
+        }
+
+        // 3. Populate Title input
+        const titleInput = card.querySelector(`[data-seo-title="${activeLang}"]`);
+        if (titleInput && pageName) {
+            const autoTitle = `${pageName} | Satguru Travel`;
+            titleInput.value = autoTitle.slice(0, 255);
+            titleInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        // 4. Populate Description input
+        const descInput = card.querySelector(`[data-seo-desc="${activeLang}"]`);
+        if (descInput && pageDesc) {
+            const autoDesc = pageDesc.length > 152 ? pageDesc.slice(0, 149) + "..." : pageDesc;
+            descInput.value = autoDesc.slice(0, 500);
+            descInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        updateSeoCountersAndPreview(card);
+
+        if (window.Toast) {
+            window.Toast.fire({
+                icon: "success",
+                title: window.translations?.["SEO fields auto-generated from content."] || "SEO fields auto-generated from content."
+            });
+        }
+    }
+
+    // ── Update Character Counters & SERP Preview ────────────────────────────
+    function updateSeoCountersAndPreview(card) {
+        if (!card) return;
+
+        // 1. Determine currently active language in the card/drawer
+        const activeLang = getActiveDrawerLang(card);
+
+        const titleInput = card.querySelector(`[data-seo-title="${activeLang}"]`) || card.querySelector(`[data-seo-title="en"]`);
+        const descInput = card.querySelector(`[data-seo-desc="${activeLang}"]`) || card.querySelector(`[data-seo-desc="en"]`);
+
+        // Counter elements
+        const titleCountElem = card.querySelector("[data-title-count]");
+        const descCountElem = card.querySelector("[data-desc-count]");
+
+        // SERP preview elements
+        const previewTitle = card.querySelector("[data-seo-preview-title]");
+        const previewDesc = card.querySelector("[data-seo-preview-desc]");
+
+        if (titleInput && titleCountElem) {
+            const titleLen = titleInput.value.length;
+            titleCountElem.textContent = titleLen;
+            if (titleLen > 60) {
+                titleCountElem.classList.add("text-amber-500/90");
+            } else {
+                titleCountElem.classList.remove("text-amber-500/90");
+            }
+        }
+
+        if (descInput && descCountElem) {
+            const descLen = descInput.value.length;
+            descCountElem.textContent = descLen;
+            if (descLen > 160) {
+                descCountElem.classList.add("text-amber-500/90");
+            } else {
+                descCountElem.classList.remove("text-amber-500/90");
+            }
+        }
+
+        // Live update Google SERP Snippet Preview (zero hardcoded domain URL)
+        if (previewTitle) {
+            const previewVal = (titleInput?.value.trim()) ||
+                (card.querySelector('[data-seo-title="en"]')?.value.trim());
+
+            if (previewVal) {
+                previewTitle.textContent = previewVal;
+            } else {
+                // Dynamic fallback to page title/name
+                const pageNameElem = document.getElementById(`name_${activeLang}`) ||
+                                     document.getElementById(`title_${activeLang}`) ||
+                                     document.getElementById("name_en") ||
+                                     document.getElementById("title_en") ||
+                                     document.querySelector(`[name="name[${activeLang}]"]`) ||
+                                     document.querySelector('[name="name[en]"]') ||
+                                     document.querySelector('[name="title[en]"]') ||
+                                     document.querySelector('[name="type[name][en]"]');
+                const fallbackName = getCleanTextFromElement(pageNameElem);
+                previewTitle.textContent = fallbackName ? `${fallbackName} | Satguru Travel` : "Curated Journeys | Satguru Travel";
+            }
+        }
+
+        if (previewDesc) {
+            const previewVal = (descInput?.value.trim()) ||
+                (card.querySelector('[data-seo-desc="en"]')?.value.trim());
+
+            if (previewVal) {
+                previewDesc.textContent = previewVal;
+            } else {
+                // Dynamic fallback to page description / short description
+                const pageDescElem = document.getElementById(`short_description_${activeLang}`) ||
+                                     document.getElementById(`description_${activeLang}`) ||
+                                     document.getElementById("short_description_en") ||
+                                     document.getElementById("description_en") ||
+                                     document.querySelector(`[name="short_description[${activeLang}]"]`) ||
+                                     document.querySelector('[name="short_description[en]"]') ||
+                                     document.querySelector('[name="description[en]"]') ||
+                                     document.querySelector('[name="type[description][en]"]');
+                const fallbackDesc = getCleanTextFromElement(pageDescElem);
+
+                if (fallbackDesc) {
+                    previewDesc.textContent = fallbackDesc.length > 152 ? fallbackDesc.slice(0, 149) + "..." : fallbackDesc;
+                } else {
+                    previewDesc.textContent = "Discover extraordinary Kazakhstan journeys, bespoke Silk Road expeditions, and premier DMC services curated by Satguru Travel.";
+                }
+            }
+        }
+
+        // Update header indicator and footer status
+        updateSeoIndicator();
+    }
+
+    // ── Update Trigger Indicator & Footer Status ────────────────────────────
+    function updateSeoIndicator() {
+        const inputs = Array.from(document.querySelectorAll("[data-seo-title], [data-seo-desc]"));
+        const hasCustomSeo = inputs.some(input => Boolean(input.value?.trim()));
+
+        // Header trigger indicator dot
+        document.querySelectorAll("[data-seo-indicator]").forEach((dot) => {
+            if (hasCustomSeo) {
+                dot.classList.remove("hidden");
+            } else {
+                dot.classList.add("hidden");
+            }
+        });
+
+        // Drawer footer status dot & text
+        const statusDot = drawer?.querySelector("[data-seo-status-dot]");
+        const statusText = drawer?.querySelector("[data-seo-status-text]");
+        if (statusDot && statusText) {
+            if (hasCustomSeo) {
+                statusDot.className = "w-1.5 h-1.5 rounded-full bg-brand-orange";
+                statusText.textContent = window.translations?.['Custom SEO Tags Active'] || "Custom SEO Tags Active";
+            } else {
+                statusDot.className = "w-1.5 h-1.5 rounded-full bg-muted-foreground/40";
+                statusText.textContent = window.translations?.['Auto-generated upon save if empty'] || "Auto-generated upon save if empty";
+            }
+        }
+    }
+
+    // ── Event Listeners: Triggers, Closes, Backdrop ─────────────────────────
+    document.addEventListener("click", (e) => {
+        // Open drawer
+        if (e.target.closest("[data-seo-drawer-trigger], [data-seo-drawer-open]")) {
+            e.preventDefault();
+            openDrawer();
+            return;
+        }
+
+        // Close drawer
+        if (e.target.closest("[data-seo-drawer-close]")) {
+            e.preventDefault();
+            closeDrawer();
+            return;
+        }
+
+        // Drawer Auto-Generate button
+        const autogenBtn = e.target.closest("[data-seo-autogen]");
+        if (autogenBtn) {
+            e.preventDefault();
+            const card = autogenBtn.closest("[data-seo-card]") || drawer;
+            handleAutoGenerate(card);
+            return;
+        }
+
+        // Drawer tab switch
+        const seoTabBtn = e.target.closest("[data-seo-tab]");
+        if (seoTabBtn) {
+            e.preventDefault();
+            const lang = seoTabBtn.getAttribute("data-seo-tab");
+            switchDrawerLang(lang);
+            return;
+        }
+
+        // Global language switcher tab (.tab-btn)
+        const globalTabBtn = e.target.closest(".tab-btn");
+        if (globalTabBtn) {
+            const lang = globalTabBtn.getAttribute("data-tab");
+            if (lang) {
+                switchDrawerLang(lang);
+            }
+            setTimeout(() => {
+                document.querySelectorAll("[data-seo-card]").forEach((card) => {
+                    updateSeoCountersAndPreview(card);
+                });
+            }, 50);
+            return;
+        }
+
+        // Accordion toggle if any legacy card is present
+        const toggleBtn = e.target.closest("[data-seo-toggle]");
+        if (toggleBtn) {
+            const card = toggleBtn.closest("[data-seo-card]");
+            if (!card) return;
+            const content = card.querySelector("[data-seo-content]");
+            const arrow = toggleBtn.querySelector(".seo-arrow");
+            if (content) {
+                const isHidden = content.classList.toggle("hidden");
+                toggleBtn.setAttribute("aria-expanded", isHidden ? "false" : "true");
+                if (arrow) arrow.classList.toggle("rotate-180");
+            }
+        }
+    });
+
+    // ── Escape Key Closes Drawer ────────────────────────────────────────────
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && drawer && !drawer.classList.contains("translate-x-full")) {
+            closeDrawer();
+        }
+    });
+
+    // ── Event Delegation for Live Typing ────────────────────────────────────
+    document.addEventListener("input", (e) => {
+        const target = e.target;
+        if (target.matches("[data-seo-title], [data-seo-desc]")) {
+            const card = target.closest("[data-seo-card]") || drawer;
+            updateSeoCountersAndPreview(card);
+        }
+
+        // If page name or description changes, dynamically sync SERP preview fallback
+        const isContentField = target.id?.startsWith("name_") ||
+                               target.id?.startsWith("title_") ||
+                               target.id?.startsWith("short_description_") ||
+                               target.id?.startsWith("description_") ||
+                               target.name?.includes("name[") ||
+                               target.name?.includes("title[") ||
+                               target.name?.includes("description[");
+
+        if (isContentField) {
+            document.querySelectorAll("[data-seo-card]").forEach((card) => {
+                updateSeoCountersAndPreview(card);
+            });
+        }
+    });
+
+    // ── Auto-Open on Validation Errors ──────────────────────────────────────
+    if (drawer && drawer.getAttribute("data-auto-open") === "true") {
+        openDrawer();
+    }
+
+    // ── Initial State on Load ───────────────────────────────────────────────
+    document.querySelectorAll("[data-seo-card]").forEach((card) => {
+        updateSeoCountersAndPreview(card);
+    });
+    updateSeoIndicator();
+
+    // ── Observe Programmatic Updates (e.g. Auto-Translate & Quill Changes) ──
+    const observer = new MutationObserver(() => {
+        document.querySelectorAll("[data-seo-card]").forEach((card) => {
+            updateSeoCountersAndPreview(card);
+        });
+    });
+
+    document.querySelectorAll("[data-seo-title], [data-seo-desc]").forEach((elem) => {
+        observer.observe(elem, { attributes: true, attributeFilter: ["value"] });
+    });
+
+    // Also observe Quill editor content changes if present
+    document.querySelectorAll(".ql-editor").forEach((editor) => {
+        editor.addEventListener("input", () => {
+            document.querySelectorAll("[data-seo-card]").forEach((card) => {
+                updateSeoCountersAndPreview(card);
+            });
+        });
+    });
+});

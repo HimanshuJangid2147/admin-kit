@@ -1,0 +1,24 @@
+{
+    "name": "seo_drawer",
+    "description": "Slide-over SEO drawer with multilingual Google SERP previews, character counters, auto-generation, and metadata extractor service.",
+    "requires": [
+        "core"
+    ],
+    "files": {
+        "app/Services/SeoMetadataService.php.stub": "app/Services/SeoMetadataService.php",
+        "app/Helpers/seo.php.stub": "app/Helpers/seo.php",
+        "resources/views/components/admin/seo-drawer.blade.php.stub": "resources/views/components/admin/seo-drawer.blade.php",
+        "resources/views/components/admin/seo-section.blade.php.stub": "resources/views/components/admin/seo-section.blade.php",
+        "resources/views/components/admin/seo-trigger.blade.php.stub": "resources/views/components/admin/seo-trigger.blade.php",
+        "resources/js/seoCard.js.stub": "resources/js/seoCard.js"
+    },
+    "migrations": {},
+    "env": {
+        "ADMIN_SEO_DRAWER": "true"
+    },
+    "notes": [
+        "Import resources/js/seoCard.js in your app entry point (e.g. resources/js/app.js).",
+        "Place <x-admin.seo-trigger :model=\"$model\" /> in page action bars and <x-admin.seo-drawer :model=\"$model\" /> inside your resource form.",
+        "Optional: register 'app/Helpers/seo.php' in composer.json autoload.files to enable the seo_meta() global helper."
+    ]
+}

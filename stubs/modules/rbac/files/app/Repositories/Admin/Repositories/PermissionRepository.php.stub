@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Repositories\Admin\Repositories;
+
+use App\Repositories\Admin\Interface\PermissionRepositoryInterface;
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+
+class PermissionRepository implements PermissionRepositoryInterface
+{
+    /**
+     * Get all system permissions grouped by their resource prefix.
+     */
+    public function getAllGroupedByPrefix(): Collection
+    {
+        $guard = config('admin.guard', 'admin');
+
+        return Permission::where('guard_name', $guard)
+            ->orderBy('name')
+            ->get()
+            ->groupBy(function ($permission) {
+                return explode('.', $permission->name)[0];
+            });
+    }
+
+    /**
+     * Get only the permissions assigned to a specific role, grouped by resource prefix.
+     */
+    public function getGroupedByPrefixForRole(Role $role): Collection
+    {
+        return $role->permissions
+            ->sortBy('name')
+            ->groupBy(function ($permission) {
+                return explode('.', $permission->name)[0];
+            });
+    }
+}

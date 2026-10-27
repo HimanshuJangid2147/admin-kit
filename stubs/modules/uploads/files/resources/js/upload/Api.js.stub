@@ -1,0 +1,94 @@
+/**
+ * Axios API wrapper for Upload Staging Endpoints
+ */
+export class UploadApi {
+    getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
+
+    /**
+     * Direct single-file upload payload (< 2MB)
+     */
+    async uploadDirect(file, onProgress = null, signal = null, profile = 'image') {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('profile', profile);
+
+        const response = await window.axios.post('/staged-uploads', formData, {
+            headers: {
+                'X-CSRF-TOKEN': this.getCsrfToken(),
+                'Content-Type': 'multipart/form-data',
+            },
+            signal,
+            onUploadProgress: (progressEvent) => {
+                if (onProgress && progressEvent.total) {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    onProgress(percent);
+                }
+            },
+        });
+
+        return response.data;
+    }
+
+    /**
+     * Upload a single chunk slice
+     */
+    async uploadChunkSlice(chunk, uploadUuid, chunkIndex, totalChunks, originalName, onProgress = null, signal = null, profile = 'image') {
+        const formData = new FormData();
+        formData.append('file_chunk', chunk);
+        formData.append('upload_uuid', uploadUuid);
+        formData.append('chunk_index', chunkIndex);
+        formData.append('total_chunks', totalChunks);
+        formData.append('original_name', originalName);
+        formData.append('profile', profile);
+
+        const response = await window.axios.post('/staged-uploads/chunks', formData, {
+            headers: {
+                'X-CSRF-TOKEN': this.getCsrfToken(),
+                'Content-Type': 'multipart/form-data',
+            },
+            signal,
+            onUploadProgress: (progressEvent) => {
+                if (onProgress && progressEvent.total) {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    onProgress(percent);
+                }
+            },
+        });
+
+        return response.data;
+    }
+
+    /**
+     * Complete and merge chunks
+     */
+    async completeChunkUpload(uploadUuid, totalChunks, originalName, totalSize = 0, profile = 'image') {
+        const response = await window.axios.post('/staged-uploads/chunks/complete', {
+            upload_uuid: uploadUuid,
+            total_chunks: totalChunks,
+            original_name: originalName,
+            total_size: totalSize,
+            profile: profile,
+        }, {
+            headers: {
+                'X-CSRF-TOKEN': this.getCsrfToken(),
+            },
+        });
+
+        return response.data;
+    }
+
+    /**
+     * Cancel an upload
+     */
+    async cancelUpload(uuid) {
+        const response = await window.axios.delete(`/staged-uploads/${uuid}`, {
+            headers: {
+                'X-CSRF-TOKEN': this.getCsrfToken(),
+            },
+        });
+
+        return response.data;
+    }
+}

@@ -1,0 +1,90 @@
+{{-- ── Package PDF Brochure Upload Modal ───────────────────────────────── --}}
+<div
+    id="package-pdf-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="package-pdf-modal-title"
+    tabindex="-1"
+    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300"
+>
+    <div
+        id="package-pdf-panel"
+        class="relative w-full max-w-md mx-4 bg-card border border-border/80 rounded-2xl shadow-2xl scale-95 opacity-0 transition-all duration-300 flex flex-col overflow-hidden"
+    >
+        {{-- Modal Header --}}
+        <div class="px-6 py-4 flex items-center justify-between border-b border-border/40">
+            <div>
+                <h3 id="package-pdf-modal-title" class="font-serif italic text-xl text-foreground">
+                    {{ statictranslations('Upload Package Brochure (PDF)') }}
+                </h3>
+                <p id="package-pdf-modal-subtitle" class="text-xs text-muted-foreground mt-0.5 font-sans">
+                    {{ statictranslations('Attach or update the PDF itinerary for this package.') }}
+                </p>
+            </div>
+            <button
+                type="button"
+                id="package-pdf-close"
+                class="flex items-center justify-center w-8 h-8 rounded-full border border-border/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer"
+            >
+                <i class="fa-solid fa-xmark w-4 h-4"></i>
+            </button>
+        </div>
+
+        {{-- Upload Form --}}
+        <form id="package-pdf-form" action="{{ \Illuminate\Support\Facades\Route::has('admin.packages.save-pdf') ? route('admin.packages.save-pdf') : '#' }}" method="POST" class="flex flex-col">
+            @csrf
+            <input type="hidden" name="id" id="package-pdf-record-id" value="">
+
+            {{-- Modal Body --}}
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                {{-- Package Name Display --}}
+                <div class="px-4 py-2.5 rounded-xl border border-primary/20 bg-primary/5 text-xs text-foreground font-sans flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf w-4 h-4 text-primary shrink-0"></i>
+                    <span id="package-pdf-name" class="font-semibold truncate"></span>
+                </div>
+
+                {{-- Current PDF Indicator --}}
+                <div id="package-pdf-current-box" class="hidden px-4 py-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-xs font-sans flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-file-lines w-4 h-4 shrink-0"></i>
+                        {{ statictranslations('Current Brochure Attached') }}
+                    </span>
+                    <a id="package-pdf-current-link" href="#" target="_blank" class="text-[11px] font-bold uppercase tracking-wider underline hover:text-emerald-300">
+                        {{ statictranslations('View PDF') }}
+                    </a>
+                </div>
+
+                {{-- Chunked Staged PDF Dropzone --}}
+                <div class="flex flex-col space-y-2">
+                    <label class="text-xs font-semibold text-foreground/85">
+                        {{ statictranslations('Select PDF Document') }}
+                    </label>
+                    <x-admin.pdfuploader name="pdf" :multiple="false" accept="application/pdf" label="Drag & Drop PDF or click to browse" />
+                </div>
+
+                {{-- Feedback Alert --}}
+                <div id="package-pdf-modal-feedback" class="hidden text-xs text-red-500 font-medium px-1"></div>
+            </div>
+
+            {{-- Modal Footer --}}
+            <div class="px-6 py-4 bg-muted/10 border-t border-border/40 flex items-center justify-end gap-3">
+                <button
+                    type="button"
+                    id="package-pdf-cancel"
+                    class="h-9 px-4 rounded-lg border border-border/80 hover:bg-muted text-muted-foreground hover:text-foreground font-sans text-xs uppercase tracking-[0.12em] transition-all duration-150 cursor-pointer"
+                >
+                    {{ statictranslations('Cancel') }}
+                </button>
+                <button
+                    type="submit"
+                    id="package-pdf-submit"
+                    disabled
+                    class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-lg bg-primary hover:bg-brand-green-hover text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] transition-all duration-200 font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span id="package-pdf-submit-text">{{ statictranslations('Save PDF') }}</span>
+                    <i id="package-pdf-submit-spinner" class="fa-solid fa-loader-2 hidden animate-spin h-3.5 w-3.5 text-primary-foreground"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

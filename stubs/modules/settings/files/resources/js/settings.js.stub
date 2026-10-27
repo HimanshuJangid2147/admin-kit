@@ -1,0 +1,269 @@
+// resources/js/settings.js
+
+document.addEventListener("DOMContentLoaded", () => {
+    // ── 1. Settings Sub-Tabs Handler (Event Delegated) ─────────────────────
+    function activateSettingsTab(targetSelector) {
+        if (!targetSelector) return;
+        const tabsContainer = document.querySelector("[data-tabs-container]") || document.body;
+        const btn = tabsContainer.querySelector(`.settings-tab-btn[data-tab-target="${targetSelector}"]`);
+        if (!btn) return;
+
+        tabsContainer.querySelectorAll(".settings-tab-btn").forEach((b) => {
+            b.classList.remove("active", "border-primary", "text-primary");
+            b.classList.add("border-transparent", "text-muted-foreground");
+        });
+
+        btn.classList.add("active", "border-primary", "text-primary");
+        btn.classList.remove("border-transparent", "text-muted-foreground");
+
+        tabsContainer.querySelectorAll(".tab-content-panel").forEach((panel) => {
+            panel.classList.add("hidden");
+        });
+
+        const targetPanel = tabsContainer.querySelector(targetSelector);
+        if (targetPanel) {
+            targetPanel.classList.remove("hidden");
+        }
+
+        try {
+            sessionStorage.setItem("active_settings_tab", targetSelector);
+            if (window.location.hash !== targetSelector) {
+                history.replaceState(null, "", targetSelector);
+            }
+        } catch (e) {}
+    }
+
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest(".settings-tab-btn");
+        if (!btn) return;
+
+        const targetSelector = btn.getAttribute("data-tab-target");
+        if (!targetSelector) return;
+
+        activateSettingsTab(targetSelector);
+    });
+
+    const initialTab = window.location.hash || sessionStorage.getItem("active_settings_tab");
+    if (initialTab && document.querySelector(initialTab)) {
+        activateSettingsTab(initialTab);
+    }
+
+    // ── 2. Create Site Settings Initial Button Handler ─────────────────────
+    document.addEventListener("click", async (e) => {
+        const createBtn = e.target.closest("#create-site-settings-btn");
+        if (!createBtn) return;
+
+        const routeUrl = createBtn.getAttribute("data-url");
+        if (!routeUrl) return;
+
+        const originalBtnHtml = createBtn.innerHTML;
+
+        try {
+            createBtn.disabled = true;
+            createBtn.classList.add("opacity-70", "cursor-not-allowed");
+            createBtn.innerHTML = `<span class="animate-spin">⏳</span> Initializing...`;
+
+            const response = await window.axios.post(routeUrl);
+
+            if (response.data && response.data.success) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        } catch (error) {
+            console.error("Failed to initialize settings:", error);
+            createBtn.disabled = false;
+            createBtn.classList.remove("opacity-70", "cursor-not-allowed");
+            createBtn.innerHTML = originalBtnHtml;
+        }
+    });
+
+    // ── Helper: Clear Form Validation Errors ─────────────────────────────
+    function clearFormErrors(form) {
+        form.querySelectorAll(".field-error-msg").forEach((el) => el.remove());
+        form.querySelectorAll(".is-invalid").forEach((el) => {
+            el.classList.remove("is-invalid", "!border-red-500", "!border-destructive", "!ring-red-500/10");
+        });
+    }
+
+    // ── Helper: Display Form Validation Errors ───────────────────────────
+    function displayFormErrors(form, errors) {
+        clearFormErrors(form);
+        let firstInvalidField = null;
+
+        Object.keys(errors).forEach((key) => {
+            const errorMessages = Array.isArray(errors[key]) ? errors[key] : [errors[key]];
+            const firstMsg = errorMessages[0];
+
+            // Normalize key e.g. site_quote.en -> site_quote[en]
+            let fieldSelector = `[name="${key}"]`;
+            if (key.includes(".")) {
+                const parts = key.split(".");
+                const fieldName = `${parts[0]}[${parts.slice(1).join("][")}]`;
+                fieldSelector = `[name="${fieldName}"]`;
+            }
+
+            let field = form.querySelector(fieldSelector);
+
+            // Fallback: search for input containing the root name
+            if (!field && key.includes(".")) {
+                const rootName = key.split(".")[0];
+                field = form.querySelector(`[name^="${rootName}["]`);
+            }
+
+            if (field) {
+                field.classList.add("!border-red-500", "is-invalid");
+
+                // Check if field is hidden inside a tab, switch tab if needed
+                const tabContent = field.closest(".tab-content");
+                if (tabContent && tabContent.classList.contains("hidden")) {
+                    const tabId = tabContent.id;
+                    const tabLocale = tabId.includes("-fr") ? "fr" : "en";
+                    const tabBtn = form.closest("section")?.querySelector(`.tab-btn[data-tab="${tabLocale}"]`);
+                    if (tabBtn) tabBtn.click();
+                }
+
+                // If combobox trigger backing
+                const comboboxTrigger = field.closest("#phone-code-combobox-container")?.querySelector(".combobox-trigger");
+                if (comboboxTrigger) {
+                    comboboxTrigger.classList.add("!border-red-500");
+                }
+
+                // Append red error message below field or wrapper
+                const errorSpan = document.createElement("p");
+                errorSpan.className = "field-error-msg text-xs text-destructive mt-1.5 font-medium animate-in fade-in";
+                errorSpan.textContent = firstMsg;
+
+                const targetParent = field.closest(".tab-content") || field.closest(".relative") || field.parentElement;
+                targetParent.appendChild(errorSpan);
+
+                if (!firstInvalidField) {
+                    firstInvalidField = field;
+                }
+            }
+        });
+
+        if (firstInvalidField) {
+            firstInvalidField.scrollIntoView({ behavior: "smooth", block: "center" });
+            firstInvalidField.focus();
+        }
+    }
+
+    // Dynamic error cleanup on user input
+    document.addEventListener("input", (e) => {
+        const field = e.target;
+        if (field.classList.contains("is-invalid") || field.classList.contains("!border-red-500")) {
+            field.classList.remove("is-invalid", "!border-red-500", "!border-destructive");
+            const parent = field.closest(".tab-content") || field.closest(".relative") || field.parentElement;
+            parent?.querySelector(".field-error-msg")?.remove();
+        }
+    });
+
+    // ── 3. Settings Forms AJAX Submission Handler (Event Delegated) ────────
+    document.addEventListener("submit", async (e) => {
+        const form = e.target.closest(".settings-ajax-form");
+        if (!form) return;
+
+        e.preventDefault();
+        clearFormErrors(form);
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : "";
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add("opacity-70", "cursor-not-allowed");
+                submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin h-4 w-4"></i> ${typeof trans === "function" ? trans("Saving...") : "Saving..."}`;
+            }
+
+            const formData = new FormData(form);
+            const response = await window.axios.post(form.action, formData);
+
+            if (response.data && response.data.success) {
+                // Reset staged uploaders in the saved form immediately
+                form.querySelectorAll(".staged-uploader-widget").forEach((widget) => {
+                    widget._uploadManagerInstance?.reset();
+                });
+
+                // Show Luxury SweetAlert2 Success Modal Popup
+                const successTitle = typeof trans === "function" ? trans("Settings Saved") : "Settings Saved";
+                const successMsg = response.data.message || (typeof trans === "function" ? trans("Your changes have been saved successfully.") : "Your changes have been saved successfully.");
+                const okBtnText = typeof trans === "function" ? trans("Continue") : "Continue";
+
+                if (window.Swal) {
+                    window.Swal.fire({
+                        title: `<span class="font-sans font-bold text-2xl text-foreground">${successTitle}</span>`,
+                        html: `<p class="font-sans text-xs text-muted-foreground mt-2 leading-relaxed">${successMsg}</p>`,
+                        icon: "success",
+                        iconColor: "#10723b",
+                        confirmButtonText: okBtnText,
+                        customClass: {
+                            popup: "!rounded-2xl !border !border-border !shadow-2xl font-sans p-6 !bg-card !text-foreground",
+                            confirmButton: "!px-8 !py-2.5 !bg-primary !text-primary-foreground !font-bold !text-xs !uppercase !tracking-wider !rounded-xl !shadow-md hover:!bg-brand-green-hover transition-all cursor-pointer",
+                        },
+                        buttonsStyling: false,
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else if (window.Toast) {
+                    window.Toast.fire({ icon: "success", title: successMsg });
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 800);
+                }
+            }
+        } catch (error) {
+            console.error("Form submission failed:", error);
+
+            if (error.response && error.response.status === 422) {
+                const errors = error.response.data.errors || {};
+                displayFormErrors(form, errors);
+
+                if (window.Toast) {
+                    const fallbackMsg = error.response.data.message || (typeof trans === "function" ? trans("Please correct the errors below.") : "Please correct the errors below.");
+                    window.Toast.fire({ icon: "error", title: fallbackMsg });
+                }
+            } else {
+                const errorMsg = error.response?.data?.message || (typeof trans === "function" ? trans("An unexpected error occurred.") : "An unexpected error occurred.");
+                if (window.Toast) {
+                    window.Toast.fire({ icon: "error", title: errorMsg });
+                }
+            }
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove("opacity-70", "cursor-not-allowed");
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
+    });
+
+    // ── 3. Maintenance Toggle AJAX Handler (Event Delegated) ───────────────
+    document.addEventListener("change", async (e) => {
+        const maintenanceToggle = e.target.closest("#maintenance-toggle-btn, #header-maintenance-toggle-btn");
+        if (!maintenanceToggle) return;
+
+        const routeUrl = maintenanceToggle.getAttribute("data-url");
+        if (!routeUrl) return;
+
+        const isChecked = maintenanceToggle.checked;
+
+        try {
+            const response = await window.axios.post(routeUrl, {
+                maintenance_mode: isChecked ? 1 : 0,
+            });
+
+            if (response.data && response.data.success) {
+                // Reload page to reflect updated maintenance state across Header & Dashboard immediately
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
+            }
+        } catch (error) {
+            console.error("Failed to toggle maintenance mode:", error);
+            // Revert checkbox state on error
+            maintenanceToggle.checked = !isChecked;
+        }
+    });
+});

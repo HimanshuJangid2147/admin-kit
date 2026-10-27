@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Repositories\Admin\Repositories;
+
+use App\Models\UploadStaging;
+use App\Repositories\Admin\Interface\UploadStagingRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
+
+class UploadStagingRepository implements UploadStagingRepositoryInterface
+{
+    /**
+     * Create a new temporary staging upload record.
+     */
+    public function create(array $data): UploadStaging
+    {
+        return UploadStaging::create($data);
+    }
+
+    /**
+     * Find a staging upload record by UUID.
+     */
+    public function findByUuid(string $uuid): ?UploadStaging
+    {
+        return UploadStaging::where('uuid', $uuid)->first();
+    }
+
+    /**
+     * Update the status of a staging record.
+     */
+    public function updateStatus(string $uuid, string $status): bool
+    {
+        $staging = $this->findByUuid($uuid);
+        if (! $staging) {
+            return false;
+        }
+
+        return $staging->update(['status' => $status]);
+    }
+
+    /**
+     * Delete a staging record by UUID.
+     */
+    public function deleteByUuid(string $uuid): bool
+    {
+        $staging = $this->findByUuid($uuid);
+        if (! $staging) {
+            return false;
+        }
+
+        return (bool) $staging->delete();
+    }
+
+    /**
+     * Fetch stale committed or failed staging records older than hours threshold.
+     */
+    public function getStaleStagingUploads(int $hoursThreshold = 24): Collection
+    {
+        $cutoff = Carbon::now()->subHours($hoursThreshold);
+        $statuses = ['completed', 'committed', 'failed'];
+
+        return UploadStaging::whereIn('status', $statuses)
+            ->where('created_at', '<=', $cutoff)
+            ->get();
+    }
+
+    /**
+     * Fetch all committed or failed staging records regardless of age.
+     */
+    public function getAllStagingUploads(): Collection
+    {
+        $statuses = ['completed', 'committed', 'failed'];
+
+        return UploadStaging::whereIn('status', $statuses)->get();
+    }
+}

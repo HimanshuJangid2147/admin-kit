@@ -1,0 +1,195 @@
+@extends('layouts.app')
+
+@section('title', $admin->name . ' - ' . statictranslations('Admin Profile Detail'))
+@section('page-title', statictranslations('Admin Profile Detail'))
+
+@section('content')
+<div class="max-w-screen mx-auto space-y-6">
+
+    {{-- Page Header & Floating Actions --}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-xl md:text-2xl font-serif font-black text-zinc-900 dark:text-white leading-tight flex items-center gap-3">
+                {{ $admin->name }}
+                @if($admin->is_active)
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 border border-green-200/50 dark:border-green-800/30 font-sans tracking-wide">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        {{ statictranslations('Active') }}
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/30 font-sans tracking-wide">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        {{ statictranslations('Inactive') }}
+                    </span>
+                @endif
+            </h1>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                {{ statictranslations('Comprehensive view of the administrator\'s profile, access levels, and regional permissions.') }}
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{{ route('admin.users.index') }}" class="btn-secondary py-2 px-4 text-xs">
+                <x-lucide-arrow-left class="w-3.5 h-3.5" />
+                {{ statictranslations('Back') }}
+            </a>
+            @can('userManagement.update')
+                <a href="{{ route('admin.users.edit', ['id' => $admin->id]) }}" class="btn-gold py-2 px-6 text-xs group relative overflow-hidden">
+                    <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></span>
+                    <span class="relative z-10 flex items-center gap-2">
+                        <x-lucide-edit-3 class="w-3.5 h-3.5" />
+                        {{ statictranslations('Edit Profile') }}
+                    </span>
+                </a>
+            @endcan
+        </div>
+    </div>
+
+    {{-- Asymmetrical Bento Grid --}}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {{-- LEFT COLUMN (1/3) - Visuals & Meta --}}
+        <div class="lg:col-span-4 space-y-6">
+
+            {{-- Avatar & Identity Card --}}
+            <div class="lj-card p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(212,175,55,0.08)_0%,_transparent_70%)] pointer-events-none" aria-hidden="true"></div>
+
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 w-full text-left mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-2">
+                    {{ statictranslations('Profile Identity') }}
+                </h3>
+
+                <div class="relative mb-2">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-lj-wine via-lj-gold to-lj-wine rounded-full blur-lg opacity-30"></div>
+                    <div class="relative w-32 h-32 rounded-full overflow-hidden border-2 border-lj-gold/40 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center shadow-xl">
+                        @if($admin->avatar)
+                            <img src="{{ Storage::disk(config('admin.uploads.disk', 'public'))->url($admin->avatar) }}" alt="{{ $admin->name }}" class="w-full h-full object-cover">
+                        @else
+                            <span class="text-4xl font-serif font-black text-lj-gold/50">{{ strtoupper(substr($admin->name ?? 'A', 0, 1)) }}</span>
+                        @endif
+                    </div>
+                </div>
+
+                <h2 class="mt-4 text-lg font-serif font-bold text-zinc-900 dark:text-white">
+                    {{ $admin->name }}
+                </h2>
+                <div class="mt-1 flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-mono text-xs bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700/50">
+                    <x-lucide-at-sign class="w-3 h-3" /> {{ $admin->username }}
+                </div>
+            </div>
+
+            {{-- System Meta Card --}}
+            <div class="lj-card p-6 relative overflow-hidden">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-5 border-b border-zinc-200/50 dark:border-white/5 pb-2">
+                    {{ statictranslations('System Records') }}
+                </h3>
+
+                <div class="space-y-5 text-sm">
+                    <div>
+                        <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">
+                            <x-lucide-calendar-plus class="w-3.5 h-3.5" /> {{ statictranslations('Date Added') }}
+                        </span>
+                        <span class="font-mono text-zinc-800 dark:text-zinc-200">
+                            {{ $admin->created_at?->format('d M Y, H:i') ?? '-' }}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">
+                            <x-lucide-clock class="w-3.5 h-3.5" /> {{ statictranslations('Last Modified') }}
+                        </span>
+                        <span class="font-mono text-zinc-800 dark:text-zinc-200">
+                            {{ $admin->updated_at?->format('d M Y, H:i') ?? '-' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- RIGHT COLUMN (2/3) - Data Attributes --}}
+        <div class="lg:col-span-8 space-y-6">
+
+            {{-- Contact Information Card --}}
+            <div class="lj-card p-6 md:p-8 relative overflow-hidden">
+                <div class="absolute -top-32 -right-32 w-64 h-64 rounded-full bg-lj-wine/5 blur-3xl pointer-events-none" aria-hidden="true"></div>
+
+                <div class="flex items-center gap-2 mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-3">
+                    <x-lucide-contact class="w-4 h-4 text-lj-gold" />
+                    <h2 class="text-sm font-serif font-bold text-zinc-900 dark:text-white">
+                        {{ statictranslations('Contact Information') }}
+                    </h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {{-- Email --}}
+                    <div class="space-y-1">
+                        <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                            <x-lucide-mail class="w-3.5 h-3.5" /> {{ statictranslations('Primary Email') }}
+                        </span>
+                        <div class="text-base font-medium text-zinc-900 dark:text-white px-1">
+                            {{ $admin->email }}
+                        </div>
+                    </div>
+
+                    {{-- Phone --}}
+                    <div class="space-y-1">
+                        <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                            <x-lucide-phone class="w-3.5 h-3.5" /> {{ statictranslations('Phone Number') }}
+                        </span>
+                        <div class="text-base font-mono font-medium text-zinc-900 dark:text-white px-1">
+                            {{ $admin->phone ?: '-' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Security & Access Card --}}
+            <div class="lj-card p-6 md:p-8 relative overflow-hidden">
+                <div class="flex items-center gap-2 mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-3">
+                    <x-lucide-lock-keyhole class="w-4 h-4 text-lj-gold" />
+                    <h2 class="text-sm font-serif font-bold text-zinc-900 dark:text-white">
+                        {{ statictranslations('Assigned Access Controls') }}
+                    </h2>
+                </div>
+
+                <div class="space-y-8">
+                    {{-- Assigned Roles --}}
+                    <div>
+                        <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-3 bg-zinc-50 dark:bg-zinc-800/50 inline-block px-3 py-1 rounded-md border border-zinc-200/50 dark:border-white/5">
+                            {{ statictranslations('System Roles') }}
+                        </h4>
+                        <div class="flex flex-wrap gap-2.5">
+                            @forelse($admin->roles as $role)
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-lj-gold/10 text-lj-gold border border-lj-gold/20 shadow-sm transition-all hover:border-lj-gold/50 cursor-default">
+                                    <x-lucide-shield class="w-3.5 h-3.5" />
+                                    {{ $role->name }}
+                                </span>
+                            @empty
+                                <span class="text-xs text-zinc-400 italic">{{ statictranslations('No roles assigned.') }}</span>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    {{-- Assigned Countries --}}
+                    @if(isset($admin->countries))
+                    <div>
+                        <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-3 bg-zinc-50 dark:bg-zinc-800/50 inline-block px-3 py-1 rounded-md border border-zinc-200/50 dark:border-white/5">
+                            {{ statictranslations('Regional Country Access') }}
+                        </h4>
+                        <div class="flex flex-wrap gap-2.5">
+                            @forelse($admin->countries as $country)
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 border border-zinc-200/80 dark:border-zinc-700/50 shadow-sm transition-all hover:border-lj-gold/50 cursor-default">
+                                    <x-lucide-globe class="w-3.5 h-3.5 text-zinc-400" />
+                                    {{ $country->name }}
+                                </span>
+                            @empty
+                                <span class="text-xs text-zinc-400 italic">{{ statictranslations('Global access or no countries assigned.') }}</span>
+                            @endforelse
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+@endsection

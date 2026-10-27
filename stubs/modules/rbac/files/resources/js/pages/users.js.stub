@@ -1,0 +1,72 @@
+document.addEventListener('DOMContentLoaded', function() {
+    const tableElement = document.getElementById('admins-table');
+    if (tableElement && window.$) {
+        const ajaxUrl = tableElement.dataset.ajaxUrl;
+        const table = window.$('#admins-table').DataTable({
+            ajax: {
+                url: ajaxUrl,
+                data: function(d) {
+                    d.role_filter = window.$('#role_filter').val();
+                    d.status_filter = window.$('#status_filter').val();
+                }
+            },
+            columns: [
+                { data: 'checkbox', orderable: false, searchable: false, class: 'text-center w-12' },
+                { data: 'avatar', orderable: false, searchable: false, class: 'text-center' },
+                { data: 'name', class: 'text-left' },
+                { data: 'username', class: 'text-left' },
+                { data: 'email', class: 'text-left' },
+                { data: 'roles', orderable: false, class: 'text-left' },
+                { data: 'country', orderable: false, class: 'text-left' },
+                { data: 'status', class: 'text-center' },
+                { data: 'action', orderable: false, class: 'text-right' }
+            ],
+            order: [[2, 'asc']]
+        });
+
+        // Trigger filters redraw
+        window.$('#role_filter, #status_filter').on('change', function() {
+            table.draw();
+        });
+
+        // Toggle filters panel
+        window.$('#toggle-filters').on('click', function() {
+            const panel = window.$('#filters-panel');
+            if (panel.hasClass('hidden')) {
+                panel.removeClass('hidden');
+                panel.css({
+                    'max-height': '0px',
+                    'opacity': 0
+                });
+                const scrollHeight = panel[0].scrollHeight;
+                panel.animate({
+                    'max-height': scrollHeight + 'px',
+                    'opacity': 1
+                }, 300, function() {
+                    panel.css({
+                        'max-height': '',
+                        'overflow': 'visible'
+                    });
+                });
+            } else {
+                panel.css('overflow', 'hidden');
+                panel.animate({
+                    'max-height': '0px',
+                    'opacity': 0
+                }, 300, function() {
+                    panel.addClass('hidden');
+                    panel.css('max-height', '');
+                });
+            }
+            window.$(this).toggleClass('bg-zinc-100 dark:bg-white/[0.06] border-lj-gold text-lj-gold');
+        });
+
+        // Select All checkboxes
+        window.$('#select-all').on('change', function() {
+            const checked = this.checked;
+            window.$('#admins-table tbody input[name="ids[]"]').each(function() {
+                this.checked = checked;
+            });
+        });
+    }
+});

@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
+
+class ChunkService
+{
+    /**
+     * Store an incoming chunk slice file in storage/app/uploads/chunks/{uuid}/{index}.part
+     */
+    public function storeChunkSlice(UploadedFile $chunk, string $uuid, int $chunkIndex): string
+    {
+        $directory = storage_path("app/uploads/chunks/{$uuid}");
+
+        if (! File::exists($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+
+        $chunkPath = "{$directory}/{$chunkIndex}.part";
+        $chunk->move($directory, "{$chunkIndex}.part");
+
+        return $chunkPath;
+    }
+
+    /**
+     * Merge chunk slices into storage/app/uploads/temp/{uuid}.{ext}
+     */
+    public function mergeChunks(string $uuid, int $totalChunks, string $extension): string
+    {
+        $chunksDirectory = storage_path("app/uploads/chunks/{$uuid}");
+        $tempDirectory = storage_path('app/uploads/temp');
+
+        if (! File::exists($tempDirectory)) {
+            File::makeDirectory($tempDirectory, 0755, true);
+        }
+
+        $finalFileName = "{$uuid}.{$extension}";
+        $finalPath = "{$tempDirectory}/{$finalFileName}";
+
+        $out = @fopen($finalPath, 'wb');
+        if ($out === false) {
+            throw new \RuntimeException("Unable to open output file {$finalPath} for writing.");
+        }
+
+        try {
+            for ($i = 0; $i < $totalChunks; $i++) {
+                $chunkFile = "{$chunksDirectory}/{$i}.part";
+
+                if (! File::exists($chunkFile)) {
+                    throw new \RuntimeException("Missing chunk index {$i} for upload UUID {$uuid}.");
+                }
+
+                $in = @fopen($chunkFile, 'rb');
+                if ($in === false) {
+                    throw new \RuntimeException("Unable to open chunk slice file {$chunkFile} for reading.");
+                }
+
+                try {
+                    stream_copy_to_stream($in, $out);
+                } finally {
+                    fclose($in);
+                }
+            }
+        } catch (\Throwable $e) {
+            fclose($out);
+            if (File::exists($finalPath)) {
+                File::delete($finalPath);
+            }
+            throw $e;
+        }
+
+        fclose($out);
+
+        // Delete raw chunk slices directory immediately after successful merge
+        $this->deleteChunkSlices($uuid);
+
+        return "uploads/temp/{$finalFileName}";
+    }
+
+    /**
+     * Compute SHA-256 checksum of a file.
+     */
+    public function calculateChecksum(string $fullPath): string
+    {
+        return hash_file('sha256', $fullPath);
+    }
+
+    /**
+     * Delete partial chunk slice directory for a UUID.
+     */
+    public function deleteChunkSlices(string $uuid): void
+    {
+        $directory = storage_path("app/uploads/chunks/{$uuid}");
+        if (File::exists($directory)) {
+            File::deleteDirectory($directory);
+        }
+    }
+}

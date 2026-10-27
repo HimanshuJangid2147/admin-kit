@@ -1,0 +1,243 @@
+{{-- ── Premium Page Banner Upload Modal ───────────────────────────────── --}}
+<div
+    id="banner-upload-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="banner-modal-title"
+    tabindex="-1"
+    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300"
+>
+    <div
+        id="banner-upload-panel"
+        class="relative w-full max-w-lg mx-4 bg-card border border-border/80 rounded-2xl shadow-2xl scale-95 opacity-0 transition-all duration-300 flex flex-col overflow-hidden"
+    >
+        {{-- Modal Header --}}
+        <div class="px-6 py-4 flex items-center justify-between border-b border-border/40">
+            <div>
+                <h3 id="banner-modal-title" class="font-serif italic text-xl text-foreground">
+                    {{ statictranslations('Change Page Banner') }}
+                </h3>
+                <p id="banner-modal-subtitle" class="text-xs text-muted-foreground mt-0.5">
+                    {{ statictranslations('Upload a high-resolution banner image.') }}
+                </p>
+            </div>
+            <button
+                type="button"
+                id="banner-upload-close"
+                class="flex items-center justify-center w-8 h-8 rounded-full border border-border/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer"
+            >
+                <i class="fa-solid fa-xmark w-4 h-4"></i>
+            </button>
+        </div>
+
+        {{-- Upload Form --}}
+        <form id="banner-upload-form" action="{{ \Illuminate\Support\Facades\Route::has('admin.page_banners.upload') ? route('admin.page_banners.upload') : '#' }}" method="POST" enctype="multipart/form-data" class="flex flex-col">
+            @csrf
+            <input type="hidden" name="for_page" id="banner-upload-page-key" value="">
+
+            {{-- Modal Body --}}
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                {{-- Current Status Box --}}
+                <div id="banner-current-status-box" class="px-4 py-2.5 rounded-xl border text-[11px] flex items-center gap-2 transition-all duration-200">
+                    <span id="banner-status-dot" class="h-2 w-2 rounded-full shrink-0"></span>
+                    <span id="banner-status-text" class="font-sans font-medium"></span>
+                </div>
+
+                {{-- Dropzone / Upload Area --}}
+                <div class="flex flex-col space-y-2">
+                    <x-admin.uploader name="image" :multiple="false" accept="image/*" />
+                </div>
+
+                {{-- Language Tabs Switcher inside Modal with Auto-Translate Button --}}
+                <div class="flex items-center justify-between gap-4 mb-3 border-b border-border/40 pb-3">
+                    <div class="flex items-center gap-1 border border-border/80 bg-muted/40 p-1 rounded-xl w-fit select-none">
+                        <button type="button" data-banner-tab="en" class="banner-tab-btn px-4 py-1.5 rounded-lg text-xs font-sans uppercase tracking-wider font-semibold transition-all duration-300 bg-background text-foreground shadow-sm cursor-pointer">
+                            EN
+                        </button>
+                        <button type="button" data-banner-tab="ru" class="banner-tab-btn px-4 py-1.5 rounded-lg text-xs font-sans uppercase tracking-wider font-semibold transition-all duration-300 text-muted-foreground hover:text-foreground cursor-pointer">
+                            RU
+                        </button>
+                        <button type="button" data-banner-tab="kk" class="banner-tab-btn px-4 py-1.5 rounded-lg text-xs font-sans uppercase tracking-wider font-semibold transition-all duration-300 text-muted-foreground hover:text-foreground cursor-pointer">
+                            KK
+                        </button>
+                    </div>
+                    <button type="button" id="btn-auto-translate" data-translate-url="{{ Route::has('admin.translations.auto-fill') ? route('admin.translations.auto-fill') : (Route::has('translations.auto-fill') ? route('translations.auto-fill') : '#') }}" class="inline-flex items-center justify-center gap-2 h-8 px-4 rounded-xl border border-primary/30 bg-primary/5 text-primary hover:bg-primary/15 active:bg-primary/25 transition-all duration-300 text-xs font-sans uppercase tracking-wider font-bold cursor-pointer">
+                        <i class="fa-solid fa-language text-sm"></i>
+                        {{ statictranslations('Translate') }}
+                    </button>
+                </div>
+
+                {{-- Banner Text Content Fields --}}
+                <div class="space-y-3 pt-2">
+                    {{-- English Fields Tab --}}
+                    <div id="banner-tab-content-en" class="banner-tab-content space-y-3">
+                        {{-- Title Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <label for="title_en" class="text-xs font-semibold text-foreground/85">
+                                {{ statictranslations('Title (English)') }} <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                name="title[en]"
+                                id="title_en"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200"
+                                placeholder="{{ statictranslations('Enter banner title') }}"
+                                required
+                            >
+                        </div>
+
+                        {{-- Eyebrow Text Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <label for="eyebrow_text_en" class="text-xs font-semibold text-foreground/85">
+                                {{ statictranslations('Eyebrow Text (English)') }}
+                            </label>
+                            <input
+                                type="text"
+                                name="eyebrow_text[en]"
+                                id="eyebrow_text_en"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200"
+                                placeholder="{{ statictranslations('Enter banner eyebrow text (e.g. FAQ)') }}"
+                            >
+                        </div>
+
+                        {{-- Description Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <label for="description_en" class="text-xs font-semibold text-foreground/85">
+                                    {{ statictranslations('Description (English)') }}
+                                </label>
+                                <span id="description_en_counter" class="text-[10px] text-muted-foreground">0/150</span>
+                            </div>
+                            <textarea
+                                name="description[en]"
+                                id="description_en"
+                                maxlength="150"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200 h-20 resize-none"
+                                placeholder="{{ statictranslations('Enter banner description') }}"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    {{-- Russian Fields Tab --}}
+                    <div id="banner-tab-content-ru" class="banner-tab-content space-y-3 hidden">
+                        {{-- Title Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <label for="title_ru" class="text-xs font-semibold text-foreground/85">
+                                {{ statictranslations('Title (Russian)') }}
+                            </label>
+                            <input
+                                type="text"
+                                name="title[ru]"
+                                id="title_ru"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200"
+                                placeholder="{{ statictranslations('Enter banner title (Russian)') }}"
+                            >
+                        </div>
+
+                        {{-- Eyebrow Text Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <label for="eyebrow_text_ru" class="text-xs font-semibold text-foreground/85">
+                                {{ statictranslations('Eyebrow Text (Russian)') }}
+                            </label>
+                            <input
+                                type="text"
+                                name="eyebrow_text[ru]"
+                                id="eyebrow_text_ru"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200"
+                                placeholder="{{ statictranslations('Enter banner eyebrow text (Russian)') }}"
+                            >
+                        </div>
+
+                        {{-- Description Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <label for="description_ru" class="text-xs font-semibold text-foreground/85">
+                                    {{ statictranslations('Description (Russian)') }}
+                                </label>
+                                <span id="description_ru_counter" class="text-[10px] text-muted-foreground">0/150</span>
+                            </div>
+                            <textarea
+                                name="description[ru]"
+                                id="description_ru"
+                                maxlength="150"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200 h-20 resize-none"
+                                placeholder="{{ statictranslations('Enter banner description (Russian)') }}"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    {{-- Kazakh Fields Tab --}}
+                    <div id="banner-tab-content-kk" class="banner-tab-content space-y-3 hidden">
+                        {{-- Title Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <label for="title_kk" class="text-xs font-semibold text-foreground/85">
+                                {{ statictranslations('Title (Kazakh)') }}
+                            </label>
+                            <input
+                                type="text"
+                                name="title[kk]"
+                                id="title_kk"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200"
+                                placeholder="{{ statictranslations('Enter banner title (Kazakh)') }}"
+                            >
+                        </div>
+
+                        {{-- Eyebrow Text Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <label for="eyebrow_text_kk" class="text-xs font-semibold text-foreground/85">
+                                {{ statictranslations('Eyebrow Text (Kazakh)') }}
+                            </label>
+                            <input
+                                type="text"
+                                name="eyebrow_text[kk]"
+                                id="eyebrow_text_kk"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200"
+                                placeholder="{{ statictranslations('Enter banner eyebrow text (Kazakh)') }}"
+                            >
+                        </div>
+
+                        {{-- Description Field --}}
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <label for="description_kk" class="text-xs font-semibold text-foreground/85">
+                                    {{ statictranslations('Description (Kazakh)') }}
+                                </label>
+                                <span id="description_kk_counter" class="text-[10px] text-muted-foreground">0/150</span>
+                            </div>
+                            <textarea
+                                name="description[kk]"
+                                id="description_kk"
+                                maxlength="150"
+                                class="w-full bg-background border border-border/80 rounded-xl px-4 py-2.5 text-xs text-foreground outline-none focus:border-primary transition-all duration-200 h-20 resize-none"
+                                placeholder="{{ statictranslations('Enter banner description (Kazakh)') }}"
+                            ></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Alert/Feedback Message Container --}}
+                <div id="banner-modal-feedback" class="hidden text-xs text-red-500 font-medium px-1"></div>
+            </div>
+
+            {{-- Modal Footer --}}
+            <div class="px-6 py-4 bg-muted/10 border-t border-border/40 flex items-center justify-end gap-3">
+                <button
+                    type="button"
+                    id="banner-upload-cancel"
+                    class="h-9 px-4 rounded-lg border border-border/80 hover:bg-muted text-muted-foreground hover:text-foreground font-sans text-xs uppercase tracking-[0.12em] transition-all duration-150 cursor-pointer"
+                >
+                    {{ statictranslations('Cancel') }}
+                </button>
+                <button
+                    type="submit"
+                    id="banner-upload-submit"
+                    disabled
+                    class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-lg bg-primary hover:bg-brand-green-hover text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] transition-all duration-200 font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span id="banner-submit-text">{{ statictranslations('Save Banner') }}</span>
+                    <i id="banner-submit-spinner" class="fa-solid fa-spinner hidden animate-spin h-3.5 w-3.5 text-primary-foreground"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

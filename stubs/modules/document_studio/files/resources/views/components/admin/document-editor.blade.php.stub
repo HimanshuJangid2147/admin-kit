@@ -1,0 +1,193 @@
+@props([
+    'name' => 'content[en]',
+    'id' => 'content_en',
+    'value' => '',
+    'locale' => 'en',
+    'label' => null,
+    'placeholder' => null,
+])
+
+@php
+    $defaultLabel = $locale === 'fr' 
+        ? statictranslations('Document Content (French)') 
+        : statictranslations('Document Content (English)');
+    $label = $label ?: $defaultLabel;
+
+    $defaultPlaceholder = $locale === 'fr' 
+        ? statictranslations('Saisissez le texte du document, ou téléchargez un PDF de remplacement ci-dessous...') 
+        : statictranslations('Enter document text, or upload a replacement PDF below...');
+    $placeholder = $placeholder ?: $defaultPlaceholder;
+@endphp
+
+<div class="flex flex-col gap-2">
+    @if($label)
+        <label for="{{ $id }}" class="text-xs font-bold text-foreground uppercase tracking-wider">
+            {{ $label }}
+        </label>
+    @endif
+
+    <div
+        class="document-studio-container flex flex-col w-full border border-border/70 rounded-2xl bg-card overflow-hidden shadow-2xs transition-all duration-300 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10"
+        data-doc-studio
+        data-locale="{{ $locale }}"
+    >
+        {{-- Floating Bubble Menu for TipTap (Selection Toolbar) --}}
+        <div class="doc-bubble-menu hidden items-center gap-0.5 bg-card/95 border border-border/80 shadow-2xl rounded-xl p-1 z-50 backdrop-blur-md">
+            <button type="button" class="doc-bubble-btn h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted text-xs flex items-center justify-center cursor-pointer transition-colors" data-bubble-action="bold" title="{{ statictranslations('Bold') }}"><i class="fa-solid fa-bold text-[10px]"></i></button>
+            <button type="button" class="doc-bubble-btn h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted text-xs flex items-center justify-center cursor-pointer transition-colors" data-bubble-action="italic" title="{{ statictranslations('Italic') }}"><i class="fa-solid fa-italic text-[10px]"></i></button>
+            <button type="button" class="doc-bubble-btn h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted text-xs flex items-center justify-center cursor-pointer transition-colors" data-bubble-action="strike" title="{{ statictranslations('Strikethrough') }}"><i class="fa-solid fa-strikethrough text-[10px]"></i></button>
+            <span class="h-3.5 w-px bg-border/60 mx-0.5"></span>
+            <button type="button" class="doc-bubble-btn h-7 px-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors" data-bubble-action="heading-2" title="{{ statictranslations('Heading 2') }}">H2</button>
+            <button type="button" class="doc-bubble-btn h-7 px-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] font-bold flex items-center justify-center cursor-pointer transition-colors" data-bubble-action="heading-3" title="{{ statictranslations('Heading 3') }}">H3</button>
+            <button type="button" class="doc-bubble-btn h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted text-xs flex items-center justify-center cursor-pointer transition-colors" data-bubble-action="bullet-list" title="{{ statictranslations('Bullet List') }}"><i class="fa-solid fa-list-ul text-[10px]"></i></button>
+            <span class="h-3.5 w-px bg-border/60 mx-0.5"></span>
+            <button type="button" class="doc-bubble-btn h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted text-xs flex items-center justify-center cursor-pointer transition-colors" data-bubble-action="clear-format" title="{{ statictranslations('Clear Formatting') }}"><i class="fa-solid fa-eraser text-[10px]"></i></button>
+        </div>
+
+        {{-- Studio Toolbar Header --}}
+        <div class="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2.5 bg-muted/40 border-b border-border/40 select-none">
+            {{-- Mode Switcher --}}
+            <div class="flex items-center gap-1 bg-card/90 border border-border/80 p-0.5 rounded-xl">
+                <button
+                    type="button"
+                    class="doc-mode-btn doc-mode-visual px-3 py-1 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-200 bg-background text-foreground shadow-sm cursor-pointer flex items-center gap-1.5"
+                    data-mode="visual"
+                >
+                    <i class="fa-solid fa-pen-nib text-[11px] text-primary"></i>
+                    <span>{{ statictranslations('Visual Editor') }}</span>
+                </button>
+                <button
+                    type="button"
+                    class="doc-mode-btn doc-mode-code px-3 py-1 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-200 text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1.5"
+                    data-mode="code"
+                >
+                    <i class="fa-solid fa-code text-[11px]"></i>
+                    <span>{{ statictranslations('Source HTML') }}</span>
+                </button>
+                <button
+                    type="button"
+                    class="doc-mode-btn doc-mode-split px-3 py-1 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-200 text-muted-foreground hover:text-foreground cursor-pointer hidden md:flex items-center gap-1.5"
+                    data-mode="split"
+                >
+                    <i class="fa-solid fa-table-columns text-[11px]"></i>
+                    <span>{{ statictranslations('Split') }}</span>
+                </button>
+            </div>
+
+            {{-- Formatting & Tool Groups --}}
+            <div class="doc-tools-group flex items-center gap-1 flex-wrap">
+                {{-- History --}}
+                <div class="flex items-center gap-0.5">
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="undo" title="{{ statictranslations('Undo (Ctrl+Z)') }}"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="redo" title="{{ statictranslations('Redo (Ctrl+Y)') }}"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+
+                <span class="h-4 w-px bg-border/60 mx-0.5"></span>
+
+                {{-- Blocks & Headings --}}
+                <div class="flex items-center gap-0.5">
+                    <button type="button" class="doc-tiptap-btn h-7 px-2 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] font-bold transition-colors cursor-pointer" data-tiptap-action="heading-2" title="{{ statictranslations('Heading 2') }}">H2</button>
+                    <button type="button" class="doc-tiptap-btn h-7 px-2 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] font-bold transition-colors cursor-pointer" data-tiptap-action="heading-3" title="{{ statictranslations('Heading 3') }}">H3</button>
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="paragraph" title="{{ statictranslations('Normal Paragraph') }}"><i class="fa-solid fa-paragraph"></i></button>
+                </div>
+
+                <span class="h-4 w-px bg-border/60 mx-0.5"></span>
+
+                {{-- Inline Marks --}}
+                <div class="flex items-center gap-0.5">
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="bold" title="{{ statictranslations('Bold (Ctrl+B)') }}"><i class="fa-solid fa-bold"></i></button>
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="italic" title="{{ statictranslations('Italic (Ctrl+I)') }}"><i class="fa-solid fa-italic"></i></button>
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="strike" title="{{ statictranslations('Strikethrough') }}"><i class="fa-solid fa-strikethrough"></i></button>
+                </div>
+
+                <span class="h-4 w-px bg-border/60 mx-0.5"></span>
+
+                {{-- Lists & Quotes --}}
+                <div class="flex items-center gap-0.5">
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="bullet-list" title="{{ statictranslations('Bullet List') }}"><i class="fa-solid fa-list-ul"></i></button>
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="ordered-list" title="{{ statictranslations('Numbered List') }}"><i class="fa-solid fa-list-ol"></i></button>
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="blockquote" title="{{ statictranslations('Blockquote') }}"><i class="fa-solid fa-quote-left"></i></button>
+                    <button type="button" class="doc-tiptap-btn h-7 w-7 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] flex items-center justify-center transition-colors cursor-pointer" data-tiptap-action="horizontal-rule" title="{{ statictranslations('Divider Line') }}"><i class="fa-solid fa-minus"></i></button>
+                </div>
+
+                <span class="h-4 w-px bg-border/60 mx-0.5"></span>
+
+                {{-- First-Class Table Tools --}}
+                <div class="doc-table-tools flex items-center gap-0.5 bg-muted/30 border border-border/50 p-0.5 rounded-lg">
+                    <button type="button" class="doc-tiptap-btn h-6 px-2 rounded-md bg-card/80 text-muted-foreground hover:text-foreground hover:bg-muted text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer" data-tiptap-action="insert-table" title="{{ statictranslations('Insert 2-Column Table') }}">
+                        <i class="fa-solid fa-table text-primary"></i>
+                        <span>{{ statictranslations('Table') }}</span>
+                    </button>
+                    <button type="button" class="doc-tiptap-btn doc-table-ctrl h-6 w-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-[10px] flex items-center justify-center transition-colors cursor-pointer opacity-50" data-tiptap-action="add-row-after" title="{{ statictranslations('Add Row Below') }}"><i class="fa-solid fa-plus"></i></button>
+                    <button type="button" class="doc-tiptap-btn doc-table-ctrl h-6 w-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-[10px] flex items-center justify-center transition-colors cursor-pointer opacity-50" data-tiptap-action="delete-row" title="{{ statictranslations('Delete Current Row') }}"><i class="fa-solid fa-trash-can"></i></button>
+                    <button type="button" class="doc-tiptap-btn doc-table-ctrl h-6 w-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-[10px] flex items-center justify-center transition-colors cursor-pointer opacity-50" data-tiptap-action="add-col-after" title="{{ statictranslations('Add Column After') }}"><i class="fa-solid fa-table-columns"></i></button>
+                    <button type="button" class="doc-tiptap-btn doc-table-ctrl h-6 w-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-[10px] flex items-center justify-center transition-colors cursor-pointer opacity-50" data-tiptap-action="delete-col" title="{{ statictranslations('Delete Column') }}"><i class="fa-solid fa-table-cells"></i></button>
+                    <button type="button" class="doc-tiptap-btn doc-table-ctrl h-6 w-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-[10px] flex items-center justify-center transition-colors cursor-pointer opacity-50" data-tiptap-action="merge-split" title="{{ statictranslations('Merge / Split Cells') }}"><i class="fa-solid fa-object-ungroup"></i></button>
+                    <button type="button" class="doc-tiptap-btn doc-table-ctrl h-6 w-6 rounded-md text-destructive/70 hover:text-destructive hover:bg-destructive/10 text-[10px] flex items-center justify-center transition-colors cursor-pointer opacity-50" data-tiptap-action="delete-table" title="{{ statictranslations('Delete Entire Table') }}"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+
+            {{-- Actions --}}
+            <div class="flex items-center gap-1.5 ml-auto">
+                <button
+                    type="button"
+                    class="doc-clean-btn h-7 px-2 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                    title="{{ statictranslations('Clear formatting from selection') }}"
+                    data-tiptap-action="clear-format"
+                >
+                    <i class="fa-solid fa-eraser text-[10px]"></i>
+                    <span class="hidden lg:inline">{{ statictranslations('Clean') }}</span>
+                </button>
+                <button
+                    type="button"
+                    class="doc-format-btn h-7 px-2.5 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                    title="{{ statictranslations('Format & Indent HTML Tags') }}"
+                >
+                    <i class="fa-solid fa-wand-magic-sparkles text-primary text-[10px]"></i>
+                    <span class="hidden sm:inline">{{ statictranslations('Format') }}</span>
+                </button>
+                <button
+                    type="button"
+                    class="doc-copy-btn h-7 px-2.5 rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-muted text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                    title="{{ statictranslations('Copy Clean HTML Source') }}"
+                >
+                    <i class="fa-regular fa-copy text-[10px]"></i>
+                    <span class="hidden sm:inline">{{ statictranslations('Copy') }}</span>
+                </button>
+            </div>
+        </div>
+
+        {{-- Main Workspace (Panes) --}}
+        <div class="doc-panes-wrapper relative grid grid-cols-1 w-full min-h-[440px]">
+            {{-- Visual Editor Pane (TipTap) --}}
+            <div class="doc-preview-pane doc-visual-pane w-full p-6 md:p-8 bg-muted/15 overflow-x-auto min-h-[440px] max-h-[700px] overflow-y-auto">
+                <div class="doc-tiptap-editor w-full"></div>
+            </div>
+
+            {{-- Code Pane (Source HTML) --}}
+            <div class="doc-code-pane hidden w-full min-h-[440px] max-h-[700px] bg-background/90 p-4">
+                <textarea
+                    class="doc-code-textarea w-full h-full min-h-[400px] font-mono text-xs leading-relaxed bg-transparent text-foreground placeholder:text-muted-foreground/40 border-none outline-none resize-none focus:ring-0"
+                    placeholder="{{ $placeholder }}"
+                    spellcheck="false"
+                >{{ $value }}</textarea>
+            </div>
+        </div>
+
+        {{-- Hidden Form Input for Laravel Request Submit --}}
+        <textarea name="{{ $name }}" id="{{ $id }}" class="doc-hidden-input hidden">{{ $value }}</textarea>
+
+        {{-- Studio Footer Bar --}}
+        <div class="flex items-center justify-between px-4 py-2 bg-muted/30 border-t border-border/30 text-[11px] text-muted-foreground select-none">
+            <div class="doc-edit-hint flex items-center gap-1.5">
+                <i class="fa-solid fa-keyboard text-primary/80 text-[10px]"></i>
+                <span class="doc-hint-text">{{ statictranslations("Shortcut: '## ' for H2, '- ' for list. In tables, Tab jumps cells & adds rows.") }}</span>
+            </div>
+            <div class="doc-counter-badge flex items-center gap-2 font-mono shrink-0">
+                <span class="doc-words">0 words</span>
+                <span>•</span>
+                <span class="doc-chars">0 chars</span>
+            </div>
+        </div>
+    </div>
+</div>

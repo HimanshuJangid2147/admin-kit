@@ -1,0 +1,44 @@
+/*
+ * Preset: emerald-orange (Satguru). Primary, accent and sidebar values come from your existing app.css.
+ * background, foreground, muted, border and card are PLACEHOLDERS derived from the same hue: adjust them.
+ */
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-accent: var(--accent);
+    --color-muted: var(--muted);
+    --color-border: var(--border);
+    --color-card: var(--card);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --font-heading: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+    --background: oklch(0.995 0.003 152.18);
+    --foreground: oklch(0.16 0.02 152.18);
+    --primary: oklch(0.486 0.121 152.18);
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.688 0.171 48.82);
+    --muted: oklch(0.96 0.01 152.18);
+    --border: oklch(0.91 0.015 152.18);
+    --card: oklch(1 0 0);
+    --sidebar: oklch(0.985 0.005 152.18);
+    --sidebar-foreground: oklch(0.16 0.02 152.18);
+}
+
+.dark {
+    --background: oklch(0.12 0.010 152.18);
+    --foreground: oklch(0.985 0 0);
+    --primary: oklch(0.55 0.13 152.18);
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.688 0.171 48.82);
+    --muted: oklch(0.22 0.015 152.18);
+    --border: oklch(1 0 0 / 12%);
+    --card: oklch(0.16 0.015 152.18);
+    --sidebar: oklch(0.12 0.010 152.18);
+    --sidebar-foreground: oklch(0.985 0 0);
+}

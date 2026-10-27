@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Http\Requests\Admin\UserManagement;
+
+use App\Http\Requests\Admin\AdminRequest;
+
+class StoreAdminRequest extends AdminRequest
+{
+    protected function targetTable(): string
+    {
+        return 'admin_users';
+    }
+
+    public function authorize(): bool
+    {
+        return (bool) $this->adminUser()?->can('user.create');
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:admin_users,email'],
+            'username' => ['nullable', 'string', 'max:255', 'unique:admin_users,username'],
+            'password' => ['required', 'string', 'min:8'],
+            'confirmed_password' => ['nullable', 'string', 'min:8', 'same:password'],
+            'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,svg', 'max:2048'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'is_active' => ['required', 'boolean'],
+            'role_ids' => ['required', 'array'],
+            'role_ids.*' => ['integer', 'exists:roles,id'],
+            'country_ids' => ['nullable', 'array'],
+        ];
+    }
+}

@@ -1,0 +1,325 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UserManagement\DeleteAdminRequest;
+use App\Http\Requests\Admin\UserManagement\EditAdminRequest;
+use App\Http\Requests\Admin\UserManagement\ListAdminRequest;
+use App\Http\Requests\Admin\UserManagement\StoreAdminRequest;
+use App\Http\Requests\Admin\UserManagement\ToggleAdminStatusRequest;
+use App\Http\Requests\Admin\UserManagement\UpdateAdminRequest;
+use App\Http\Requests\Admin\UserManagement\ViewAdminRequest;
+use App\Repositories\Admin\Interface\AdminRepositoryInterface;
+use App\Services\Admin\AdminService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
+use Spatie\Permission\Models\Role;
+use Throwable;
+use Yajra\DataTables\Facades\DataTables;
+
+class UserManagementController extends Controller
+{
+    public function index(): View
+    {
+        $guard = config('admin.guard', 'admin');
+        $roles = Role::where('guard_name', $guard)->get();
+
+        return view('pages.admin.index', compact('roles'));
+    }
+
+    public function createAdminProfileForm(): View|RedirectResponse
+    {
+        try {
+            return view('pages.admin.create');
+        } catch (Throwable $e) {
+            Log::error('Error loading create admin profile form.', ['exception' => $e]);
+
+            return back()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to load the form. Please try again later.') : __('Unable to load the form. Please try again later.')
+            );
+        }
+    }
+
+    public function storeAdminProfile(StoreAdminRequest $request, AdminService $adminService): RedirectResponse
+    {
+        try {
+            $validated = $request->validated();
+            $result = $adminService->superAdminCreateAccount($validated);
+
+            if (! $result) {
+                return back()->withInput()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Unable to create admin profile. Please verify your permissions and input.') : __('Unable to create admin profile. Please verify your permissions and input.')
+                );
+            }
+
+            return redirect()->route('admin.users.index')->with(
+                'success',
+                function_exists('statictranslations') ? statictranslations('Admin profile created successfully.') : __('Admin profile created successfully.')
+            );
+        } catch (Throwable $e) {
+            Log::error('Error creating admin profile.', ['exception' => $e]);
+
+            return back()->withInput()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to create admin profile.') : __('Unable to create admin profile.')
+            );
+        }
+    }
+
+    public function editAdminProfileForm(EditAdminRequest $request, AdminService $adminService): View|RedirectResponse
+    {
+        try {
+            $id = $request->resolveId();
+            $admin = $adminService->getById($id);
+            if (! $admin) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Admin not found.') : __('Admin not found.')
+                );
+            }
+
+            if ($admin->hasRole('super-admin') && ! auth(config('admin.guard', 'admin'))->user()->hasRole('super-admin')) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Unauthorized to modify a super-admin profile.') : __('Unauthorized to modify a super-admin profile.')
+                );
+            }
+
+            return view('pages.admin.edit', compact('admin'));
+        } catch (Throwable $e) {
+            Log::error('Error loading edit admin profile form.', ['exception' => $e]);
+
+            return back()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to load the form. Please try again later.') : __('Unable to load the form. Please try again later.')
+            );
+        }
+    }
+
+    public function updateAdminProfile(UpdateAdminRequest $request, AdminService $adminService): RedirectResponse
+    {
+        try {
+            $adminId = $request->resolveId();
+            $admin = $adminService->getById($adminId);
+
+            if (! $admin) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Admin not found.') : __('Admin not found.')
+                );
+            }
+
+            if ($admin->hasRole('super-admin') && ! auth(config('admin.guard', 'admin'))->user()->hasRole('super-admin')) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Unauthorized to modify a super-admin profile.') : __('Unauthorized to modify a super-admin profile.')
+                );
+            }
+
+            $currentAdmin = auth(config('admin.guard', 'admin'))->user();
+            if ($admin->id === $currentAdmin?->id && isset($request->validated()['is_active']) && ! $request->validated()['is_active']) {
+                return back()->withInput()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('You cannot deactivate your own account.') : __('You cannot deactivate your own account.')
+                );
+            }
+
+            $result = $adminService->superAdminUpdateAccount($request->validated(), $adminId);
+
+            if (! $result) {
+                return back()->withInput()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Unable to update admin profile. Please verify your permissions.') : __('Unable to update admin profile. Please verify your permissions.')
+                );
+            }
+
+            return redirect()->route('admin.users.index')->with(
+                'success',
+                function_exists('statictranslations') ? statictranslations('Admin profile updated successfully.') : __('Admin profile updated successfully.')
+            );
+        } catch (Throwable $e) {
+            Log::error('Error updating admin profile.', ['exception' => $e]);
+
+            return back()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to update admin profile. Please try again later.') : __('Unable to update admin profile. Please try again later.')
+            );
+        }
+    }
+
+    public function showAdminProfile(ViewAdminRequest $request, AdminService $adminService): View|RedirectResponse
+    {
+        try {
+            $id = $request->resolveId();
+            $admin = $adminService->getById($id);
+
+            if (! $admin) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Admin not found.') : __('Admin not found.')
+                );
+            }
+
+            return view('pages.admin.show', compact('admin'));
+        } catch (Throwable $e) {
+            Log::error('Error showing admin profile.', ['exception' => $e]);
+
+            return back()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to load admin profile. Please try again later.') : __('Unable to load admin profile. Please try again later.')
+            );
+        }
+    }
+
+    public function destroyAdminProfile(DeleteAdminRequest $request, AdminService $adminService): JsonResponse
+    {
+        try {
+            $id = $request->resolveId();
+            $admin = $adminService->getById($id);
+
+            if (! $admin) {
+                return response()->json([
+                    'error' => function_exists('statictranslations') ? statictranslations('Admin not found.') : __('Admin not found.'),
+                ], 404);
+            }
+
+            $currentAdmin = auth(config('admin.guard', 'admin'))->user();
+            if ($admin->id === $currentAdmin?->id) {
+                return response()->json([
+                    'error' => function_exists('statictranslations') ? statictranslations('You cannot delete your own account.') : __('You cannot delete your own account.'),
+                ], 403);
+            }
+
+            if ($admin->hasRole('super-admin') && ! $currentAdmin?->hasRole('super-admin')) {
+                return response()->json([
+                    'error' => function_exists('statictranslations') ? statictranslations('Unauthorized to delete a super-admin profile.') : __('Unauthorized to delete a super-admin profile.'),
+                ], 403);
+            }
+
+            $adminService->superAdminDeleteAccount($id);
+
+            return response()->json([
+                'message' => function_exists('statictranslations') ? statictranslations('Admin profile deleted successfully.') : __('Admin profile deleted successfully.'),
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Error deleting admin profile.', ['exception' => $e]);
+
+            return response()->json([
+                'error' => function_exists('statictranslations') ? statictranslations('Unable to delete admin profile. Please try again later.') : __('Unable to delete admin profile. Please try again later.'),
+            ], 500);
+        }
+    }
+
+    public function toggleAdminStatus(ToggleAdminStatusRequest $request, AdminService $adminService): JsonResponse
+    {
+        try {
+            $id = $request->resolveId();
+            $admin = $adminService->getById($id);
+
+            if (! $admin) {
+                return response()->json([
+                    'error' => function_exists('statictranslations') ? statictranslations('Admin not found.') : __('Admin not found.'),
+                ], 404);
+            }
+
+            $currentAdmin = auth(config('admin.guard', 'admin'))->user();
+            if ($admin->id === $currentAdmin?->id) {
+                return response()->json([
+                    'error' => function_exists('statictranslations') ? statictranslations('You cannot deactivate your own account.') : __('You cannot deactivate your own account.'),
+                ], 403);
+            }
+
+            if ($admin->hasRole('super-admin') && ! $currentAdmin?->hasRole('super-admin')) {
+                return response()->json([
+                    'error' => function_exists('statictranslations') ? statictranslations('Unauthorized to toggle status for a super-admin profile.') : __('Unauthorized to toggle status for a super-admin profile.'),
+                ], 403);
+            }
+
+            $result = $adminService->superAdminToggleStatus($id);
+
+            return response()->json([
+                'message' => function_exists('statictranslations') ? statictranslations('Admin status updated successfully.') : __('Admin status updated successfully.'),
+                'data' => $result,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Error toggling admin status.', ['exception' => $e]);
+
+            return response()->json([
+                'error' => function_exists('statictranslations') ? statictranslations('Unable to update admin status. Please try again later.') : __('Unable to update admin status. Please try again later.'),
+            ], 500);
+        }
+    }
+
+    public function data(AdminRepositoryInterface $adminRepository, ListAdminRequest $request): JsonResponse
+    {
+        try {
+            $builder = $adminRepository->getDataTable($request->all());
+
+            if ($request->filled('status_filter')) {
+                $builder->where('is_active', $request->status_filter);
+            }
+
+            if ($request->filled('role_filter')) {
+                $builder->whereHas('roles', function ($q) use ($request) {
+                    $q->where('name', $request->role_filter);
+                });
+            }
+
+            return DataTables::of($builder)
+                ->addIndexColumn()
+                ->addColumn('checkbox', function ($admin) {
+                    return view('pages.admin.partials.checkbox', ['id' => $admin->id])->render();
+                })
+                ->addColumn('roles', function ($admin) {
+                    return view('pages.admin.partials.roles', ['roles' => $admin->roles->pluck('name')])->render();
+                })
+                ->addColumn('country', function ($admin) {
+                    $countries = method_exists($admin, 'countries') ? $admin->countries : collect();
+
+                    return view('pages.admin.partials.countries', ['countries' => $countries])->render();
+                })
+                ->addColumn('avatar', function ($admin) {
+                    $disk = config('admin.uploads.disk', 'public');
+                    $data = ['image' => $admin->avatar ? Storage::disk($disk)->url($admin->avatar) : asset('icons/avatar-placeholder.png')];
+
+                    return view('partials.image', $data)->render();
+                })
+                ->addColumn('status', function ($admin) use ($request) {
+                    $isSuperAdminUser = $admin->hasRole('super-admin');
+                    $currentUserIsSuperAdmin = (bool) $request->user()?->hasRole('super-admin');
+                    $isSelf = $admin->id === auth(config('admin.guard', 'admin'))->id();
+
+                    $data = [
+                        'id' => $admin->id,
+                        'status' => $admin->is_active,
+                        'toggle_url' => ($request->user()?->can('user.update') && ! $isSelf && (! $isSuperAdminUser || $currentUserIsSuperAdmin))
+                            ? route('admin.users.toggleStatus', ['id' => $admin->id])
+                            : null,
+                    ];
+
+                    return view('partials.datatable-status', $data)->render();
+                })
+                ->addColumn('action', function ($admin) use ($request) {
+                    $isSuperAdminUser = $admin->hasRole('super-admin');
+                    $currentUserIsSuperAdmin = (bool) $request->user()?->hasRole('super-admin');
+
+                    $data = [
+                        'id' => $admin->id,
+                        'delete_url' => ($request->user()?->can('user.delete') && (! $isSuperAdminUser || $currentUserIsSuperAdmin))
+                            ? route('admin.users.delete', ['id' => $admin->id])
+                            : null,
+                        'edit_url' => ($request->user()?->can('user.update') && (! $isSuperAdminUser || $currentUserIsSuperAdmin))
+                            ? route('admin.users.edit', ['id' => $admin->id])
+                            : null,
+                        'view_url' => route('admin.users.view', ['id' => $admin->id]),
+                        'resource' => function_exists('statictranslations') ? statictranslations('User') : __('User'),
+                        'label' => $admin->name,
+                    ];
+
+                    return view('partials.datatable-actions', $data)->render();
+                })
+                ->rawColumns(['checkbox', 'roles', 'country', 'avatar', 'status', 'action'])
+                ->make(true);
+        } catch (Throwable $e) {
+            Log::error('Failed to retrieve admin users for datatable.', ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => function_exists('statictranslations') ? statictranslations('An error occurred while retrieving admin users.') : __('An error occurred while retrieving admin users.'),
+            ], 500);
+        }
+    }
+}

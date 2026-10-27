@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Http\Requests\Admin\Setting;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class SiteSeoSettingRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'meta_title' => 'required|array',
+            'meta_title.en' => 'required|string|max:255',
+            'meta_title.*' => 'nullable|string|max:255',
+            'meta_description' => 'required|array',
+            'meta_description.en' => 'required|string|max:500',
+            'meta_description.*' => 'nullable|string|max:500',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'meta_title.required' => statictranslations('The meta title field is required.'),
+            'meta_title.array' => statictranslations('The meta title must be an array.'),
+            'meta_title.en.required' => statictranslations('The English meta title is required.'),
+            'meta_title.en.string' => statictranslations('The English meta title must be a string.'),
+            'meta_title.en.max' => statictranslations('The English meta title may not be greater than 255 characters.'),
+            'meta_description.required' => statictranslations('The meta description field is required.'),
+            'meta_description.array' => statictranslations('The meta description must be an array.'),
+            'meta_description.en.required' => statictranslations('The English meta description is required.'),
+            'meta_description.en.string' => statictranslations('The English meta description must be a string.'),
+            'meta_description.en.max' => statictranslations('The English meta description may not be greater than 500 characters.'),
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors.
+     */
+    public function attributes(): array
+    {
+        return [
+            'meta_title' => statictranslations('Meta Title'),
+            'meta_title.en' => statictranslations('meta title (English)'),
+            'meta_title.ru' => statictranslations('meta title (Russian)'),
+            'meta_title.kk' => statictranslations('meta title (Kazakh)'),
+            'meta_description' => statictranslations('Meta Description'),
+            'meta_description.en' => statictranslations('meta description (English)'),
+            'meta_description.ru' => statictranslations('meta description (Russian)'),
+            'meta_description.kk' => statictranslations('meta description (Kazakh)'),
+        ];
+    }
+}

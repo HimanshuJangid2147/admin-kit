@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+/**
+ * Builds the sidebar from app/Navigation/*.php. Each file returns a list of items:
+ *
+ * [
+ *     'group' => 'System Administration',
+ *     'label' => 'Roles & Permissions',
+ *     'route' => 'admin.roles.index',
+ *     'active' => 'admin.roles.*',
+ *     'icon' => 'fa-solid fa-shield-halved',
+ *     'permission' => 'role.read',   // optional
+ *     'order' => 20,                 // optional
+ * ]
+ */
+class NavigationService
+{
+    public function getSidebarMenu(): array
+    {
+        $user = Auth::guard(config('admin.guard', 'admin'))->user();
+        if (! $user) {
+            return [];
+        }
+
+        $items = [];
+        foreach (glob(app_path('Navigation/*.php')) ?: [] as $file) {
+            $list = require $file;
+            foreach ($list as $item) {
+                $items[] = $item;
+            }
+        }
+
+        usort($items, fn (array $a, array $b) => ($a['order'] ?? 100) <=> ($b['order'] ?? 100));
+
+        $checkPermissions = (bool) config('admin.rbac', false);
+        $groups = [];
+
+        foreach ($items as $item) {
+            if ($checkPermissions && ! empty($item['permission']) && ! $user->can($item['permission'])) {
+                continue;
+            }
+
+            // Skip items whose route does not exist yet instead of crashing the layout.
+            if (empty($item['route']) || ! Route::has($item['route'])) {
+                continue;
+            }
+
+            $item['url'] = route($item['route']);
+            $groups[$item['group'] ?? 'General'][] = $item;
+        }
+
+        return $groups;
+    }
+}

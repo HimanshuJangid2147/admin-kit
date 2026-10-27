@@ -1,0 +1,198 @@
+<?php
+
+namespace App\Services;
+
+use App\Repositories\Admin\Interface\SettingsRepositoryInterface as SettingsRepo;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+class SettingsService
+{
+    protected mixed $uploadStagingService = null;
+
+    public function __construct(
+        protected SettingsRepo $settingsRepository
+    ) {
+        if (class_exists('App\Services\UploadStagingService') && app()->bound('App\Services\UploadStagingService')) {
+            $this->uploadStagingService = app('App\Services\UploadStagingService');
+        }
+    }
+
+    /**
+     * Check if settings row exists in database.
+     */
+    public function checkSettingsExists(): bool
+    {
+        return $this->settingsRepository->checkSettingsExists();
+    }
+
+    /**
+     * Get current site settings.
+     */
+    public function getSettings()
+    {
+        return $this->settingsRepository->getSettings();
+    }
+
+    /**
+     * Initialize Site Settings record with default values.
+     */
+    public function initializeSettings()
+    {
+        return $this->updateSiteContent([
+            'site_quote' => ['en' => 'Welcome to ' . config('admin.brand_name', 'Admin Studio')],
+            'address' => 'Corporate Headquarters',
+            'std_code' => '+1',
+            'phone' => '555-0199',
+            'email' => 'admin@example.com',
+        ]);
+    }
+
+    /**
+     * Update Site Content Settings tab (site_quote, address, std_code, phone, email).
+     */
+    public function updateSiteContent(array $data)
+    {
+        if (function_exists('auto_translate')) {
+            $data = auto_translate($data, ['site_quote'], []);
+        }
+
+        return $this->settingsRepository->createOrUpdateSettings($data);
+    }
+
+    /**
+     * Update Social Media Settings tab (facebook, instagram, linkedin links).
+     */
+    public function updateSocialMedia(array $data)
+    {
+        return $this->settingsRepository->createOrUpdateSettings($data);
+    }
+
+    /**
+     * Update Footer PDF Settings tab (pdf_one, pdf_two and localized names).
+     */
+    public function updateFooterPdfs(array $data)
+    {
+        if (function_exists('auto_translate')) {
+            $data = auto_translate($data, ['pdf_one_name', 'pdf_two_name'], []);
+        }
+
+        $disk = config('admin.uploads.disk', 'public');
+
+        // Process PDF 1 file / staged upload UUID
+        if (isset($data['pdf_one'])) {
+            if ($data['pdf_one'] instanceof UploadedFile) {
+                $path = Storage::disk($disk)->putFile('settings/pdfs', $data['pdf_one']);
+                $data['pdf_one'] = $path;
+            } elseif (is_string($data['pdf_one'])) {
+                if ($this->uploadStagingService && method_exists($this->uploadStagingService, 'commitUpload') && ($stagedPath = $this->uploadStagingService->commitUpload($data['pdf_one'], 'settings/pdfs'))) {
+                    $data['pdf_one'] = $stagedPath;
+                } elseif (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $data['pdf_one'])) {
+                    unset($data['pdf_one']);
+                }
+            }
+        }
+
+        // Process PDF 1 Cover Image file / staged upload UUID
+        if (isset($data['pdf_one_image'])) {
+            if ($data['pdf_one_image'] instanceof UploadedFile) {
+                $path = Storage::disk($disk)->putFile('settings/pdf_images', $data['pdf_one_image']);
+                $data['pdf_one_image'] = $path;
+            } elseif (is_string($data['pdf_one_image'])) {
+                if ($this->uploadStagingService && method_exists($this->uploadStagingService, 'commitUpload') && ($stagedPath = $this->uploadStagingService->commitUpload($data['pdf_one_image'], 'settings/pdf_images'))) {
+                    $data['pdf_one_image'] = $stagedPath;
+                } elseif (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $data['pdf_one_image'])) {
+                    unset($data['pdf_one_image']);
+                }
+            }
+        }
+
+        // Process PDF 2 file / staged upload UUID
+        if (isset($data['pdf_two'])) {
+            if ($data['pdf_two'] instanceof UploadedFile) {
+                $path = Storage::disk($disk)->putFile('settings/pdfs', $data['pdf_two']);
+                $data['pdf_two'] = $path;
+            } elseif (is_string($data['pdf_two'])) {
+                if ($this->uploadStagingService && method_exists($this->uploadStagingService, 'commitUpload') && ($stagedPath = $this->uploadStagingService->commitUpload($data['pdf_two'], 'settings/pdfs'))) {
+                    $data['pdf_two'] = $stagedPath;
+                } elseif (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $data['pdf_two'])) {
+                    unset($data['pdf_two']);
+                }
+            }
+        }
+
+        // Process PDF 2 Cover Image file / staged upload UUID
+        if (isset($data['pdf_two_image'])) {
+            if ($data['pdf_two_image'] instanceof UploadedFile) {
+                $path = Storage::disk($disk)->putFile('settings/pdf_images', $data['pdf_two_image']);
+                $data['pdf_two_image'] = $path;
+            } elseif (is_string($data['pdf_two_image'])) {
+                if ($this->uploadStagingService && method_exists($this->uploadStagingService, 'commitUpload') && ($stagedPath = $this->uploadStagingService->commitUpload($data['pdf_two_image'], 'settings/pdf_images'))) {
+                    $data['pdf_two_image'] = $stagedPath;
+                } elseif (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $data['pdf_two_image'])) {
+                    unset($data['pdf_two_image']);
+                }
+            }
+        }
+
+        return $this->settingsRepository->createOrUpdateSettings($data);
+    }
+
+    /**
+     * Update Site SEO Settings tab (meta_title, meta_description).
+     */
+    public function updateSiteSeo(array $data)
+    {
+        if (isset($data['meta_title']['en'])) {
+            $data['meta_title']['en'] = str()->slug($data['meta_title']['en']);
+        }
+        if (isset($data['meta_description']['en'])) {
+            $data['meta_description']['en'] = str()->limit(trim(strip_tags($data['meta_description']['en'])), 152);
+        }
+
+        if (function_exists('auto_translate')) {
+            $data = auto_translate($data, ['meta_title', 'meta_description'], []);
+        }
+
+        return $this->settingsRepository->createOrUpdateSettings($data);
+    }
+
+    /**
+     * Update Notification Sound file.
+     */
+    public function updateNotificationSound(array $data)
+    {
+        $disk = config('admin.uploads.disk', 'public');
+
+        if (isset($data['notification_sound'])) {
+            if ($data['notification_sound'] instanceof UploadedFile) {
+                $path = Storage::disk($disk)->putFile('settings/sounds', $data['notification_sound']);
+                $data['notification_sound'] = $path;
+            } elseif (is_string($data['notification_sound'])) {
+                if ($this->uploadStagingService && method_exists($this->uploadStagingService, 'commitUpload') && ($stagedPath = $this->uploadStagingService->commitUpload($data['notification_sound'], 'settings/sounds'))) {
+                    $data['notification_sound'] = $stagedPath;
+                } elseif (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $data['notification_sound'])) {
+                    unset($data['notification_sound']);
+                }
+            }
+        }
+
+        return $this->settingsRepository->createOrUpdateSettings($data);
+    }
+
+    /**
+     * Toggle Maintenance Mode status.
+     */
+    public function maintenanceModeToggle(array $data = [])
+    {
+        return $this->settingsRepository->maintenanceModeToggle($data);
+    }
+
+    /**
+     * Get Maintenance Mode current status.
+     */
+    public function getMaintenanceMode(): bool
+    {
+        return $this->settingsRepository->getMaintenanceMode();
+    }
+}

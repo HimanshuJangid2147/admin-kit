@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Providers;
+
+use App\Repositories\Admin\Interface\UploadStagingRepositoryInterface;
+use App\Repositories\Admin\Repositories\UploadStagingRepository;
+use Illuminate\Support\ServiceProvider;
+
+class AdminUploadServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->bind(UploadStagingRepositoryInterface::class, UploadStagingRepository::class);
+
+        if (file_exists(app_path('Helpers/upload.php'))) {
+            require_once app_path('Helpers/upload.php');
+        }
+    }
+}

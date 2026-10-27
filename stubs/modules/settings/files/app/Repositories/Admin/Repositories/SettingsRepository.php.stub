@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Repositories\Admin\Repositories;
+
+use App\Models\Setting;
+use App\Repositories\Admin\Interface\SettingsRepositoryInterface;
+
+class SettingsRepository implements SettingsRepositoryInterface
+{
+    public function getSettings()
+    {
+        return Setting::first();
+    }
+
+    public function createOrUpdateSettings(array $data)
+    {
+        $settings = Setting::first();
+        if ($settings) {
+            $settings->update($data);
+
+            return $settings;
+        }
+
+        return Setting::create($data);
+    }
+
+    public function maintenanceModeToggle(array $data = [])
+    {
+        $settings = Setting::first();
+        if ($settings) {
+            $settings->update(['maintenance_mode' => ! $settings->maintenance_mode]);
+
+            return $settings->maintenance_mode;
+        }
+
+        return false;
+    }
+
+    public function getMaintenanceMode()
+    {
+        $settings = Setting::first();
+
+        return $settings ? (bool) $settings->maintenance_mode : false;
+    }
+
+    public function checkSettingsExists()
+    {
+        return Setting::exists();
+    }
+}

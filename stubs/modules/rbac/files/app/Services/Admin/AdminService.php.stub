@@ -1,0 +1,224 @@
+<?php
+
+namespace App\Services\Admin;
+
+use App\Models\Admin;
+use App\Repositories\Admin\Interface\AdminRepositoryInterface;
+use App\Repositories\Admin\Interface\RoleRepositoryInterface;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Throwable;
+
+class AdminService
+{
+    public function __construct(
+        protected AdminRepositoryInterface $adminRepository,
+        protected RoleRepositoryInterface $roleRepository
+    ) {}
+
+    public function getById(int $id): ?Admin
+    {
+        try {
+            return $this->adminRepository->findById($id);
+        } catch (Throwable $e) {
+            Log::error('Failed to retrieve admin by ID.', ['id' => $id, 'exception' => $e]);
+
+            return null;
+        }
+    }
+
+    public function superAdminCreateAccount(array $data): ?Admin
+    {
+        try {
+            $loggedInAdmin = Auth::guard(config('admin.guard', 'admin'))->user();
+
+            if (! $loggedInAdmin?->can('user.create')) {
+                return null;
+            }
+
+            return DB::transaction(function () use ($data) {
+                $password = $data['password'] ?? Str::random(12);
+
+                $admin = $this->adminRepository->create([
+                    'name' => $data['name'],
+                    'username' => $data['username'] ?? Str::slug($data['name']).'-'.Str::random(4),
+                    'email' => $data['email'],
+                    'phone' => $data['phone'] ?? null,
+                    'is_active' => (bool) ($data['is_active'] ?? true),
+                    'password' => Hash::make($password),
+                ]);
+
+                if (! empty($data['avatar']) && ! is_string($data['avatar'])) {
+                    $disk = config('admin.uploads.disk', 'public');
+                    $path = Storage::disk($disk)->putFile('avatars', $data['avatar']);
+                    $this->adminRepository->update($admin, ['avatar' => $path]);
+                }
+
+                if (! empty($data['role_ids'])) {
+                    $roles = $this->roleRepository->findByIds($data['role_ids']);
+                    $admin->syncRoles($roles);
+                }
+
+                if (isset($data['country_ids']) && method_exists($admin, 'countries')) {
+                    $admin->countries()->sync($data['country_ids']);
+                }
+
+                return $admin;
+            });
+        } catch (Throwable $e) {
+            Log::error('Failed to create admin account.', ['exception' => $e]);
+
+            return null;
+        }
+    }
+
+    public function superAdminUpdateAccount(array $data, int $id): bool
+    {
+        try {
+            $loggedInAdmin = Auth::guard(config('admin.guard', 'admin'))->user();
+
+            if (! $loggedInAdmin?->can('user.update')) {
+                return false;
+            }
+
+            $admin = $this->adminRepository->findById($id);
+            if (! $admin) {
+                return false;
+            }
+
+            if ($admin->hasRole('super-admin') && ! $loggedInAdmin->hasRole('super-admin')) {
+                Log::warning('Non-super-admin attempted to update super-admin.', [
+                    'actor' => $loggedInAdmin->id,
+                    'target' => $admin->id,
+                ]);
+
+                return false;
+            }
+
+            return DB::transaction(function () use ($admin, $data) {
+                $updateData = [];
+
+                if (isset($data['name'])) {
+                    $updateData['name'] = $data['name'];
+                }
+                if (isset($data['email'])) {
+                    $updateData['email'] = $data['email'];
+                }
+                if (isset($data['phone'])) {
+                    $updateData['phone'] = $data['phone'];
+                }
+                if (isset($data['is_active'])) {
+                    $updateData['is_active'] = (bool) $data['is_active'];
+                }
+
+                if (! empty($data['password'])) {
+                    $updateData['password'] = Hash::make($data['password']);
+                }
+
+                if (! empty($data['avatar']) && ! is_string($data['avatar'])) {
+                    $disk = config('admin.uploads.disk', 'public');
+                    if ($admin->avatar && Storage::disk($disk)->exists($admin->avatar)) {
+                        Storage::disk($disk)->delete($admin->avatar);
+                    }
+                    $updateData['avatar'] = Storage::disk($disk)->putFile('avatars', $data['avatar']);
+                }
+
+                $updated = $this->adminRepository->update($admin, $updateData);
+
+                if ($updated && isset($data['role_ids'])) {
+                    $roles = $this->roleRepository->findByIds($data['role_ids']);
+                    $admin->syncRoles($roles);
+                }
+
+                if ($updated && isset($data['country_ids']) && method_exists($admin, 'countries')) {
+                    $admin->countries()->sync($data['country_ids']);
+                }
+
+                return $updated;
+            });
+        } catch (Throwable $e) {
+            Log::error('Failed to update admin account.', ['id' => $id, 'exception' => $e]);
+
+            return false;
+        }
+    }
+
+    public function superAdminDeleteAccount(int $id): bool
+    {
+        try {
+            $loggedInAdmin = Auth::guard(config('admin.guard', 'admin'))->user();
+
+            if (! $loggedInAdmin?->can('user.delete')) {
+                return false;
+            }
+
+            $admin = $this->adminRepository->findById($id);
+            if (! $admin) {
+                return false;
+            }
+
+            if ($admin->id === $loggedInAdmin->id) {
+                return false;
+            }
+
+            if ($admin->hasRole('super-admin') && ! $loggedInAdmin->hasRole('super-admin')) {
+                Log::warning('Non-super-admin attempted to delete super-admin.', [
+                    'actor' => $loggedInAdmin->id,
+                    'target' => $admin->id,
+                ]);
+
+                return false;
+            }
+
+            return $this->adminRepository->delete($admin);
+        } catch (Throwable $e) {
+            Log::error('Failed to delete admin account.', ['id' => $id, 'exception' => $e]);
+
+            return false;
+        }
+    }
+
+    public function superAdminToggleStatus(int $id): array|bool
+    {
+        try {
+            $loggedInAdmin = Auth::guard(config('admin.guard', 'admin'))->user();
+
+            if (! $loggedInAdmin?->can('user.toggle_status')) {
+                return false;
+            }
+
+            $admin = $this->adminRepository->findById($id);
+            if (! $admin) {
+                return false;
+            }
+
+            if ($loggedInAdmin->id === $admin->id) {
+                return false;
+            }
+
+            if ($admin->hasRole('super-admin') && ! $loggedInAdmin->hasRole('super-admin')) {
+                return false;
+            }
+
+            $nextStatus = ! $admin->is_active;
+
+            $updated = $this->adminRepository->update($admin, ['is_active' => $nextStatus]);
+            if (! $updated) {
+                return false;
+            }
+
+            return [
+                'id' => (int) $admin->id,
+                'status' => (bool) $nextStatus,
+            ];
+        } catch (Throwable $e) {
+            Log::error('Failed to toggle admin status.', ['id' => $id, 'exception' => $e]);
+
+            return false;
+        }
+    }
+}

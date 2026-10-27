@@ -1,0 +1,31 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Upload Profiles Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Defines shared allow-lists, max sizes, and processing options for file uploads.
+    |
+    */
+
+    'profiles' => [
+        'image' => [
+            'extensions' => ['jpeg', 'jpg', 'png', 'gif', 'webp'],
+            'mimes' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+            'max_size' => 5242880, // 5MB in bytes
+            'max_chunk_size' => 2097152, // 2MB chunk limit
+            'max_chunks' => 100, // max 100 chunks
+            'process_image' => true,
+        ],
+        'document' => [
+            'extensions' => ['pdf'],
+            'mimes' => ['application/pdf'],
+            'max_size' => 10485760, // 10MB in bytes
+            'max_chunk_size' => 2097152,
+            'max_chunks' => 200,
+            'process_image' => false,
+        ],
+    ],
+];

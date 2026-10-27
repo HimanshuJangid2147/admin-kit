@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Events;
+
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class AdminNotificationEvent implements ShouldBroadcastNow
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    /**
+     * Create a new event instance.
+     *
+     * @param  array  $notification  [id, title, message, avatar, type, time, link]
+     */
+    public function __construct(public array $notification)
+    {
+        $this->notification = array_merge([
+            'id' => (string) uniqid('notif_'),
+            'title' => 'New Notification',
+            'message' => '',
+            'avatar' => 'ST',
+            'type' => 'info',
+            'time' => 'Just now',
+            'link' => null,
+            'is_read' => false,
+            'created_at' => now()->toISOString(),
+        ], $notification);
+    }
+
+    /**
+     * The event's broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'notification.created';
+    }
+
+    /**
+     * Get the channels the event should broadcast on.
+     *
+     * @return array<int, Channel>
+     */
+    public function broadcastOn(): array
+    {
+        return [
+            new PrivateChannel('admin.notifications'),
+            new Channel('admin-notifications'),
+        ];
+    }
+}

@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Repositories\Admin\Repositories;
+
+use App\Models\Banner;
+use App\Repositories\Admin\Interface\BannerRepositoryInterface;
+
+class BannerRepository implements BannerRepositoryInterface
+{
+    public function existsByPage(string $pageName): bool
+    {
+        return Banner::where('for_page', $pageName)->exists();
+    }
+
+    public function upsertByPage(string $pageName, array $data)
+    {
+        return Banner::updateOrCreate(
+            ['for_page' => $pageName],
+            $data
+        );
+    }
+
+    public function findByPage(string $pageName)
+    {
+        return Banner::where('for_page', $pageName)->first();
+    }
+
+    public function getBannerByPage(string $pageName)
+    {
+        return Banner::where('for_page', $pageName)->first();
+    }
+
+    public function getAllBanners()
+    {
+        return Banner::all();
+    }
+}

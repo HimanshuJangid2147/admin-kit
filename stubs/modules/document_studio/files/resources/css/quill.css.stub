@@ -1,0 +1,422 @@
+/* ── Quill Editor Dark Mode Override & Layout Adjustments ───────────────────── */
+.quill-editor-wrapper {
+  border-radius: 0.75rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ql-toolbar.ql-snow {
+  border: 1px solid var(--border) !important;
+  background-color: var(--card) !important;
+  border-top-left-radius: 0.75rem !important;
+  border-top-right-radius: 0.75rem !important;
+}
+
+.ql-container.ql-snow {
+  border: 1px solid var(--border) !important;
+  border-top: none !important;
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  font-family: inherit !important;
+  font-size: 0.875rem !important;
+  border-bottom-left-radius: 0.75rem !important;
+  border-bottom-right-radius: 0.75rem !important;
+  min-height: 240px; /* Slightly taller for rich options */
+}
+
+/* ── Quill Validation Error States ───────────────────────────────── */
+.ql-toolbar.ql-snow.is-invalid,
+.ql-toolbar.ql-snow.\!border-destructive,
+.ql-toolbar.ql-snow.\!border-red-500,
+.quill-editor-wrapper.is-invalid .ql-toolbar.ql-snow {
+  border-color: var(--destructive, #ef4444) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.ql-container.ql-snow.is-invalid,
+.ql-container.ql-snow.\!border-destructive,
+.ql-container.ql-snow.\!border-red-500,
+.quill-editor-wrapper.is-invalid .ql-container.ql-snow {
+  border-color: var(--destructive, #ef4444) !important;
+  border-top: none !important;
+}
+
+.ql-editor {
+  min-height: 240px;
+}
+
+.ql-snow .ql-stroke {
+  stroke: var(--foreground) !important;
+}
+
+.ql-snow .ql-fill {
+  fill: var(--foreground) !important;
+}
+
+.ql-snow .ql-picker {
+  color: var(--foreground) !important;
+}
+
+.ql-snow .ql-picker-options {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.ql-editor.ql-blank::before {
+  color: var(--muted-foreground) !important;
+  opacity: 0.4;
+  font-style: normal !important;
+}
+
+/* Table overrides to prevent column squishing inside editor, prose, and document studio */
+.ql-editor table,
+.prose table,
+.doc-rendered-content table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 16px 0 !important;
+  table-layout: auto !important;
+}
+
+.ql-editor th, 
+.ql-editor td,
+.prose th,
+.prose td,
+.doc-rendered-content th,
+.doc-rendered-content td {
+  border: 1px solid var(--border) !important;
+  padding: 10px 14px !important;
+  text-align: left !important;
+  font-size: 0.875rem !important;
+  line-height: 1.35rem !important;
+  vertical-align: top !important;
+  min-width: 80px !important;
+}
+
+.ql-editor th,
+.prose th,
+.doc-rendered-content th {
+  background-color: color-mix(in oklch, var(--gold) 10%, transparent) !important;
+  color: var(--foreground) !important;
+  font-weight: 600 !important;
+}
+
+/* Section band headings spanning columns (e.g. <th colspan="2">) */
+.prose th[colspan],
+.doc-rendered-content th[colspan] {
+  background-color: color-mix(in oklch, var(--gold) 18%, transparent) !important;
+  color: var(--foreground) !important;
+  text-align: center !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  padding: 0.75rem 1rem !important;
+}
+
+.prose td,
+.doc-rendered-content td {
+  color: var(--foreground) !important;
+}
+
+.prose tbody tr:hover,
+.doc-rendered-content tbody tr:hover {
+  background-color: color-mix(in oklch, var(--gold) 4%, transparent) !important;
+}
+
+/* Focus outline for live contenteditable in preview mode */
+.doc-rendered-content:focus {
+  outline: none !important;
+}
+
+.doc-rendered-content [contenteditable="true"]:focus,
+.doc-rendered-content td:focus,
+.doc-rendered-content th:focus,
+.doc-rendered-content p:focus,
+.doc-rendered-content h1:focus,
+.doc-rendered-content h2:focus,
+.doc-rendered-content h3:focus,
+.doc-rendered-content li:focus {
+  outline: 1.5px dashed var(--gold) !important;
+  outline-offset: 2px !important;
+  border-radius: 2px !important;
+}
+
+/* ── Rich Text & Prose Content Display Rules ────────────────── */
+.prose,
+.ql-editor {
+  color: var(--foreground);
+  line-height: 1.7;
+}
+
+.prose h1, .ql-editor h1 {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--foreground);
+}
+
+.prose h2, .ql-editor h2 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--foreground);
+}
+
+.prose h3, .ql-editor h3 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--foreground);
+}
+
+.prose h4, .ql-editor h4 {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.prose p, .ql-editor p {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose blockquote, .ql-editor blockquote {
+  border-left-width: 4px;
+  border-color: #caa054;
+  padding-left: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+  color: var(--muted-foreground);
+  background-color: rgba(202, 160, 84, 0.05);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+.prose pre, .ql-editor pre, .prose pre.ql-syntax, .ql-editor pre.ql-syntax {
+  background-color: #1e1e2e;
+  color: #cdd6f4;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+}
+
+.prose code, .ql-editor code {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #caa054;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.prose ul, .ql-editor ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose ol, .ql-editor ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Quill 2.x data-list formatting overrides */
+.prose ol li[data-list="bullet"],
+.ql-editor ol li[data-list="bullet"],
+.prose li[data-list="bullet"],
+.ql-editor li[data-list="bullet"] {
+  list-style-type: disc !important;
+}
+
+.prose ol li[data-list="ordered"],
+.ql-editor ol li[data-list="ordered"],
+.prose li[data-list="ordered"],
+.ql-editor li[data-list="ordered"] {
+  list-style-type: decimal !important;
+}
+
+/* Remove Quill 2 pseudo-element markers & extra padding that cause wide bullet gaps */
+.prose li[data-list]::before,
+.ql-editor li[data-list]::before {
+  content: none !important;
+  display: none !important;
+}
+
+.prose li[data-list],
+.ql-editor li[data-list] {
+  padding-left: 0 !important;
+}
+
+.prose .ql-ui,
+.ql-editor .ql-ui {
+  display: none !important;
+}
+
+.prose li, .ql-editor li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  padding-left: 0.25rem;
+}
+
+.prose a, .ql-editor a {
+  color: #caa054;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+
+.prose a:hover, .ql-editor a:hover {
+  color: #e5be70;
+}
+
+.prose img, .ql-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Quill Alignment Utility Classes */
+.ql-align-center, .prose .ql-align-center {
+  text-align: center;
+}
+
+.ql-align-right, .prose .ql-align-right {
+  text-align: right;
+}
+
+.ql-align-justify, .prose .ql-align-justify {
+  text-align: justify;
+}
+
+.ql-align-left, .prose .ql-align-left {
+  text-align: left;
+}
+
+.ql-indent-1, .prose .ql-indent-1 { padding-left: 2rem; }
+.ql-indent-2, .prose .ql-indent-2 { padding-left: 4rem; }
+.ql-indent-3, .prose .ql-indent-3 { padding-left: 6rem; }
+.ql-indent-4, .prose .ql-indent-4 { padding-left: 8rem; }
+.ql-direction-rtl, .prose .ql-direction-rtl { direction: rtl; }
+
+/* ── TipTap ProseMirror Document Studio Styles ────────────────── */
+.tiptap.ProseMirror,
+.doc-tiptap-editor .ProseMirror {
+  outline: none !important;
+  min-height: 380px;
+}
+
+.tiptap.ProseMirror:focus,
+.doc-tiptap-editor .ProseMirror:focus {
+  outline: none !important;
+}
+
+/* Empty editor placeholder */
+.tiptap.ProseMirror p.is-editor-empty:first-child::before,
+.doc-tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  pointer-events: none;
+  height: 0;
+}
+
+/* TipTap Table Overrides */
+.tiptap.ProseMirror table,
+.doc-tiptap-editor .ProseMirror table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5rem 0 !important;
+  table-layout: auto !important;
+}
+
+.tiptap.ProseMirror th,
+.tiptap.ProseMirror td,
+.doc-tiptap-editor .ProseMirror th,
+.doc-tiptap-editor .ProseMirror td {
+  border: 1px solid var(--border) !important;
+  padding: 10px 14px !important;
+  text-align: left !important;
+  font-size: 0.875rem !important;
+  line-height: 1.35rem !important;
+  vertical-align: top !important;
+  min-width: 80px !important;
+  position: relative !important;
+}
+
+.tiptap.ProseMirror th,
+.doc-tiptap-editor .ProseMirror th {
+  background-color: color-mix(in oklch, var(--gold) 10%, transparent) !important;
+  color: var(--foreground) !important;
+  font-weight: 600 !important;
+}
+
+.tiptap.ProseMirror th[colspan],
+.doc-tiptap-editor .ProseMirror th[colspan] {
+  background-color: color-mix(in oklch, var(--gold) 18%, transparent) !important;
+  color: var(--foreground) !important;
+  text-align: center !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  padding: 0.75rem 1rem !important;
+}
+
+.tiptap.ProseMirror td,
+.doc-tiptap-editor .ProseMirror td {
+  color: var(--foreground) !important;
+}
+
+.tiptap.ProseMirror tbody tr:hover,
+.doc-tiptap-editor .ProseMirror tbody tr:hover {
+  background-color: color-mix(in oklch, var(--gold) 4%, transparent) !important;
+}
+
+/* Table Selection & Column Resize Handles */
+.tiptap.ProseMirror .selectedCell:after,
+.doc-tiptap-editor .ProseMirror .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: color-mix(in oklch, var(--gold) 20%, transparent);
+  pointer-events: none;
+}
+
+.tiptap.ProseMirror .column-resize-handle,
+.doc-tiptap-editor .ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: var(--gold);
+  pointer-events: none;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+

@@ -1,0 +1,12 @@
+<?php
+
+return [
+    [
+        'group' => 'Overview',
+        'label' => 'Dashboard',
+        'route' => 'admin.dashboard',
+        'active' => 'admin.dashboard',
+        'icon' => 'fa-solid fa-gauge',
+        'order' => 0,
+    ],
+];

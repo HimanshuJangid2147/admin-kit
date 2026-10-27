@@ -1,0 +1,40 @@
+{
+    "name": "settings",
+    "description": "Global site settings: branding, contact, address, STD combobox, social channels, SEO, and maintenance mode",
+    "requires": ["core"],
+    "files": {
+        "app/Models/Setting.php.stub": "app/Models/Setting.php",
+        "app/Repositories/Admin/Interface/SettingsRepositoryInterface.php.stub": "app/Repositories/Admin/Interface/SettingsRepositoryInterface.php",
+        "app/Repositories/Admin/Repositories/SettingsRepository.php.stub": "app/Repositories/Admin/Repositories/SettingsRepository.php",
+        "app/Services/SettingsService.php.stub": "app/Services/SettingsService.php",
+        "app/Http/Controllers/Admin/SettingsController.php.stub": "app/Http/Controllers/Admin/SettingsController.php",
+        "app/Http/Requests/Admin/Setting/SiteContentSettingRequest.php.stub": "app/Http/Requests/Admin/Setting/SiteContentSettingRequest.php",
+        "app/Http/Requests/Admin/Setting/SocialMediaSettingRequest.php.stub": "app/Http/Requests/Admin/Setting/SocialMediaSettingRequest.php",
+        "app/Http/Requests/Admin/Setting/SiteSeoSettingRequest.php.stub": "app/Http/Requests/Admin/Setting/SiteSeoSettingRequest.php",
+        "app/Http/Requests/Admin/Setting/MaintenanceModeRequest.php.stub": "app/Http/Requests/Admin/Setting/MaintenanceModeRequest.php",
+        "app/Http/Requests/Admin/Setting/FooterPdfSettingRequest.php.stub": "app/Http/Requests/Admin/Setting/FooterPdfSettingRequest.php",
+        "app/Navigation/settings.php.stub": "app/Navigation/settings.php",
+        "app/Providers/AdminSettingsServiceProvider.php.stub": "app/Providers/AdminSettingsServiceProvider.php",
+        "routes/admin/settings.php.stub": "routes/admin/settings.php",
+        "resources/views/pages/settings/index.blade.php.stub": "resources/views/pages/settings/index.blade.php",
+        "resources/js/settings.js.stub": "resources/js/settings.js"
+    },
+    "migrations": {
+        "database/migrations/create_site_settings_table.php.stub": "create_site_settings_table"
+    },
+    "providers": [
+        "App\\Providers\\AdminSettingsServiceProvider"
+    ],
+    "env": {
+        "ADMIN_SETTINGS": "true"
+    },
+    "composer": [
+        "spatie/laravel-translatable"
+    ],
+    "npm": [
+        "sweetalert2"
+    ],
+    "notes": [
+        "Run php artisan migrate to create the site_settings table."
+    ]
+}

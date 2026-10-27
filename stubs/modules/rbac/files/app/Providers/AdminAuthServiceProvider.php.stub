@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Providers;
+
+use App\Repositories\Admin\Interface\AdminRepositoryInterface;
+use App\Repositories\Admin\Interface\PermissionRepositoryInterface;
+use App\Repositories\Admin\Interface\RoleRepositoryInterface;
+use App\Repositories\Admin\Repositories\AdminRepository;
+use App\Repositories\Admin\Repositories\PermissionRepository;
+use App\Repositories\Admin\Repositories\RoleRepository;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
+
+class AdminAuthServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->bind(RoleRepositoryInterface::class, RoleRepository::class);
+        $this->app->bind(PermissionRepositoryInterface::class, PermissionRepository::class);
+        $this->app->bind(AdminRepositoryInterface::class, AdminRepository::class);
+    }
+
+    public function boot(): void
+    {
+        // super-admin passes every check; null lets normal gates decide for everyone else.
+        Gate::before(static function ($user, string $ability) {
+            return method_exists($user, 'hasRole') && $user->hasRole('super-admin') ? true : null;
+        });
+    }
+}

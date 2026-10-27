@@ -1,0 +1,6 @@
+<?php
+
+use App\Http\Controllers\Admin\BannerController;
+use Illuminate\Support\Facades\Route;
+
+Route::post('/page-banners/upload', [BannerController::class, 'storeOrUpdate'])->name('page_banners.upload');

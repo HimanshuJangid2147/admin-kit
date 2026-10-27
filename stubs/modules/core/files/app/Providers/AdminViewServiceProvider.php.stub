@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Providers;
+
+use App\Services\NavigationService;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
+
+class AdminViewServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        if (file_exists(app_path('Helpers/StaticTranslatorHelper.php'))) {
+            require_once app_path('Helpers/StaticTranslatorHelper.php');
+        }
+        if (file_exists(app_path('Helpers/translation.php'))) {
+            require_once app_path('Helpers/translation.php');
+        }
+    }
+
+    public function boot(): void
+    {
+        if (file_exists(base_path('routes/admin.php'))) {
+            $this->loadRoutesFrom(base_path('routes/admin.php'));
+        }
+
+        View::composer('partials.sidebar', function ($view) {
+            $view->with('navGroups', app(NavigationService::class)->getSidebarMenu());
+        });
+    }
+}

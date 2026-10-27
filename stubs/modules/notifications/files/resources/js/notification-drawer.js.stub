@@ -1,0 +1,594 @@
+import Pusher from "pusher-js";
+
+document.addEventListener("DOMContentLoaded", () => {
+    const trigger = document.getElementById("notification-trigger");
+    const drawer = document.getElementById("notification-drawer");
+    const backdrop = document.getElementById("notification-backdrop");
+    const closeBtn = document.getElementById("notification-drawer-close");
+    const markAllBtn = document.getElementById("notification-mark-all");
+    const clearAllBtn = document.getElementById("notification-clear-all");
+    const soundToggle = document.getElementById("notification-sound-toggle");
+    const soundOnIcon = document.getElementById("sound-on-icon");
+    const soundOffIcon = document.getElementById("sound-off-icon");
+    const badge = document.getElementById("notification-badge");
+    const unreadCountSpan = document.getElementById("drawer-unread-count");
+    const container = document.getElementById("notification-items-container");
+    const loadingState = document.getElementById("notification-loading");
+    const emptyState = document.getElementById("notification-empty");
+
+    if (!trigger || !drawer) return;
+
+    const STORAGE_SOUND_KEY = "notification_sound_muted";
+    let soundMuted = localStorage.getItem(STORAGE_SOUND_KEY) === "true";
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+
+    // Track recently processed notification IDs to prevent duplicates
+    const processedNotifIds = new Set();
+
+    // Play Custom Uploaded Notification Sound or Web Audio Synthesized Chime
+    function playChime() {
+        if (soundMuted) return;
+
+        // 1. If custom uploaded sound exists, play via HTML5 Audio
+        if (window.PusherConfig?.soundUrl) {
+            try {
+                const audio = new Audio(window.PusherConfig.soundUrl);
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch((e) => {
+                        console.warn("[Sound] Autoplay restriction or audio playback failed, falling back to Web Audio synth:", e);
+                        playSynthChime();
+                    });
+                }
+                return;
+            } catch (err) {
+                console.warn("[Sound] Error playing custom audio, using fallback:", err);
+            }
+        }
+
+        // 2. Fallback to Web Audio Synthesizer
+        playSynthChime();
+    }
+
+    function playSynthChime() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+
+            // First tone
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = "sine";
+            osc1.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
+            gain1.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+            osc1.start();
+            osc1.stop(ctx.currentTime + 0.4);
+
+            // Second tone
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = "sine";
+            osc2.frequency.setValueAtTime(1318.51, ctx.currentTime + 0.08); // E6 note
+            gain2.gain.setValueAtTime(0.0, ctx.currentTime);
+            gain2.gain.setValueAtTime(0.10, ctx.currentTime + 0.08);
+            gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start(ctx.currentTime + 0.08);
+            osc2.stop(ctx.currentTime + 0.5);
+        } catch (e) {
+            console.warn("Audio Context playback failed or blocked by autoplay policy:", e);
+        }
+    }
+
+    // Sync Sound Toggle Visuals
+    function syncSoundVisuals() {
+        if (soundMuted) {
+            soundOnIcon?.classList.add("hidden");
+            soundOffIcon?.classList.remove("hidden");
+            if (soundToggle) soundToggle.title = typeof trans === "function" ? trans("Unmute sounds") : "Unmute sounds";
+        } else {
+            soundOnIcon?.classList.remove("hidden");
+            soundOffIcon?.classList.add("hidden");
+            if (soundToggle) soundToggle.title = typeof trans === "function" ? trans("Mute sounds") : "Mute sounds";
+        }
+    }
+
+    // Toggle Sound Settings
+    if (soundToggle) {
+        soundToggle.addEventListener("click", () => {
+            soundMuted = !soundMuted;
+            localStorage.setItem(STORAGE_SOUND_KEY, String(soundMuted));
+            syncSoundVisuals();
+        });
+    }
+
+    // Open Drawer
+    function openDrawer() {
+        drawer.classList.remove("translate-x-full");
+        backdrop.classList.remove("opacity-0", "pointer-events-none");
+        backdrop.classList.add("opacity-100");
+        drawer.focus();
+        document.body.style.overflow = "hidden";
+    }
+
+    // Close Drawer
+    function closeDrawer() {
+        drawer.classList.add("translate-x-full");
+        backdrop.classList.add("opacity-0", "pointer-events-none");
+        backdrop.classList.remove("opacity-100");
+        document.body.style.overflow = "";
+    }
+
+    // Update Badge & Unread Counts
+    function updateUnreadCount(count) {
+        if (count === undefined && container) {
+            const unreadItems = container.querySelectorAll("[data-unread-dot]:not(.hidden)");
+            count = unreadItems.length;
+        }
+
+        if (unreadCountSpan) {
+            unreadCountSpan.textContent = count;
+        }
+
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove("hidden");
+            } else {
+                badge.classList.add("hidden");
+            }
+        }
+    }
+
+    // Format relative time
+    function formatTime(timestamp) {
+        if (!timestamp) return typeof trans === "function" ? trans("Just now") : "Just now";
+        try {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffSeconds = Math.floor((now - date) / 1000);
+
+            if (diffSeconds < 60) return typeof trans === "function" ? trans("Just now") : "Just now";
+            if (diffSeconds < 3600) {
+                const mins = Math.floor(diffSeconds / 60);
+                return typeof trans === "function" ? `${mins} ${trans("mins ago")}` : `${mins} mins ago`;
+            }
+            if (diffSeconds < 86400) {
+                const hours = Math.floor(diffSeconds / 3600);
+                return typeof trans === "function" ? `${hours} ${trans("hours ago")}` : `${hours} hours ago`;
+            }
+            const days = Math.floor(diffSeconds / 86400);
+            return typeof trans === "function" ? `${days} ${trans("days ago")}` : `${days} days ago`;
+        } catch {
+            return typeof trans === "function" ? trans("Just now") : "Just now";
+        }
+    }
+
+    // Render single notification card with safe DOM textContent
+    function createNotificationCard(notif) {
+        const notifElement = document.createElement("div");
+        notifElement.className = "px-6 py-4.5 flex gap-4 hover:bg-muted/10 transition-all duration-300 group relative border-b border-border/30 animate-in fade-in";
+        notifElement.setAttribute("data-notif-id", notif.id);
+
+        const avatar = notif.avatar || "UT";
+        const title = notif.title || (typeof trans === "function" ? trans("New Notification") : "New Notification");
+        const message = notif.message || "";
+        const time = notif.time || formatTime(notif.created_at);
+        const isUnread = notif.is_read === false || notif.is_read === 0 || notif.is_read === "0";
+        const removeTitle = typeof trans === "function" ? trans("Remove notification") : "Remove notification";
+        const viewDetailsText = typeof trans === "function" ? trans("View Details") : "View Details";
+
+        // Validate link URL strictly
+        let safeLink = "";
+        if (typeof notif.link === "string" && (notif.link.startsWith("/") || notif.link.startsWith("http://") || notif.link.startsWith("https://"))) {
+            safeLink = notif.link;
+        }
+
+        // Static skeleton markup
+        notifElement.innerHTML = `
+            <div class="notif-avatar w-8 h-8 rounded-full border border-primary/25 bg-primary/10 flex items-center justify-center text-primary font-sans font-bold text-xs shrink-0 mt-0.5"></div>
+            <div class="flex-1 min-w-0 pr-6">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="notif-title-wrapper text-xs font-semibold text-foreground leading-snug"></p>
+                    <span class="notif-unread-dot w-1.5 h-1.5 rounded-full bg-brand-orange shrink-0 mt-1" data-unread-dot></span>
+                </div>
+                <div class="notif-badge-container mt-1 hidden"></div>
+                <p class="notif-message text-xs text-muted-foreground mt-1.5 font-light leading-relaxed"></p>
+                <div class="flex items-center justify-between mt-2">
+                    <a class="notif-action-link inline-flex items-center gap-1.5 text-[11px] text-brand-orange hover:underline mt-2 font-medium hidden"></a>
+                    <span class="notif-time text-[10px] text-muted-foreground/50 font-sans tracking-wide ml-auto"></span>
+                </div>
+            </div>
+            <button
+                type="button"
+                data-action="delete-single"
+                class="notif-delete-btn absolute right-4 top-4 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all duration-200 cursor-pointer"
+            >
+                <i class="fa-solid fa-trash-can text-xs pointer-events-none"></i>
+            </button>
+        `;
+
+        // 1. Avatar (Plain text)
+        const avatarEl = notifElement.querySelector(".notif-avatar");
+        if (avatarEl) avatarEl.textContent = avatar;
+
+        // 2. Title (Plain text / Anchor text)
+        const titleWrapper = notifElement.querySelector(".notif-title-wrapper");
+        if (titleWrapper) {
+            if (safeLink) {
+                const titleLink = document.createElement("a");
+                titleLink.className = "hover:text-primary transition-colors";
+                titleLink.href = safeLink;
+                titleLink.textContent = title;
+                titleWrapper.appendChild(titleLink);
+            } else {
+                titleWrapper.textContent = title;
+            }
+        }
+
+        // 3. Unread Dot
+        const unreadDot = notifElement.querySelector(".notif-unread-dot");
+        if (unreadDot && !isUnread) {
+            unreadDot.classList.add("hidden");
+        }
+
+        // 4. Badge
+        const type = notif.type || notif.data?.enquiry_type || "";
+        const badgeContainer = notifElement.querySelector(".notif-badge-container");
+        if (badgeContainer) {
+            let badgeClass = "";
+            let iconClass = "";
+            let badgeLabel = "";
+
+            if (type === "custom_package_enquiry" || type === "custom_trip") {
+                badgeClass = "bg-brand-orange/15 text-brand-orange border-brand-orange/30";
+                iconClass = "fa-solid fa-compass text-[8px]";
+                badgeLabel = typeof trans === "function" ? trans("Custom Package Enquiry") : "Custom Package Enquiry";
+            } else if (type === "package_enquiry") {
+                badgeClass = "bg-indigo-500/15 text-indigo-400 border-indigo-500/30";
+                iconClass = "fa-solid fa-map-location-dot text-[8px]";
+                badgeLabel = typeof trans === "function" ? trans("Package Enquiry") : "Package Enquiry";
+            } else if (type === "general_enquiry") {
+                badgeClass = "bg-muted/80 text-muted-foreground border-border/70";
+                iconClass = "fa-solid fa-envelope-open-text text-[8px]";
+                badgeLabel = typeof trans === "function" ? trans("General Enquiry") : "General Enquiry";
+            }
+
+            if (badgeLabel) {
+                badgeContainer.classList.remove("hidden");
+                const badgeSpan = document.createElement("span");
+                badgeSpan.className = `inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider border ${badgeClass}`;
+                
+                const icon = document.createElement("i");
+                icon.className = iconClass;
+                badgeSpan.appendChild(icon);
+
+                const textSpan = document.createElement("span");
+                textSpan.textContent = badgeLabel;
+                badgeSpan.appendChild(textSpan);
+
+                badgeContainer.appendChild(badgeSpan);
+            }
+        }
+
+        // 5. Message (Plain text)
+        const messageEl = notifElement.querySelector(".notif-message");
+        if (messageEl) messageEl.textContent = message;
+
+        // 6. Action Link (href + textContent)
+        const actionLinkEl = notifElement.querySelector(".notif-action-link");
+        if (actionLinkEl && safeLink) {
+            actionLinkEl.href = safeLink;
+            actionLinkEl.textContent = `${viewDetailsText} →`;
+            actionLinkEl.classList.remove("hidden");
+        }
+
+        // 7. Time (Plain text)
+        const timeEl = notifElement.querySelector(".notif-time");
+        if (timeEl) timeEl.textContent = time;
+
+        // 8. Delete Button (Attribute)
+        const deleteBtn = notifElement.querySelector(".notif-delete-btn");
+        if (deleteBtn) deleteBtn.title = removeTitle;
+
+        return notifElement;
+    }
+
+    // Prepend dynamic notification into list (live Pusher event)
+    function addNotificationItem(notif, shouldChime = true) {
+        if (!container) return;
+
+        const notifId = String(notif.id || notif.created_at || Date.now());
+        if (processedNotifIds.has(notifId)) {
+            return; // Prevent duplicate injection
+        }
+        processedNotifIds.add(notifId);
+
+        // Check if element already exists in DOM
+        if (container.querySelector(`[data-notif-id="${notif.id}"]`)) {
+            return;
+        }
+
+        if (emptyState) {
+            emptyState.classList.add("hidden");
+        }
+
+        const notifElement = createNotificationCard(notif);
+
+        if (container.firstChild) {
+            container.insertBefore(notifElement, container.firstChild);
+        } else {
+            container.appendChild(notifElement);
+        }
+
+        updateUnreadCount();
+        if (shouldChime) {
+            playChime();
+        }
+    }
+
+    // Load Initial Notifications from Backend
+    async function loadNotifications() {
+        if (!window.PusherConfig?.indexUrl) return;
+
+        try {
+            const response = await fetch(window.PusherConfig.indexUrl, {
+                headers: {
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": csrfToken,
+                }
+            });
+            const result = await response.json();
+
+            if (loadingState) {
+                loadingState.classList.add("hidden");
+            }
+
+            if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+                if (container) {
+                    container.innerHTML = "";
+                    result.data.forEach(item => {
+                        processedNotifIds.add(String(item.id));
+                        const card = createNotificationCard(item);
+                        container.appendChild(card);
+                    });
+                }
+                if (emptyState) emptyState.classList.add("hidden");
+                updateUnreadCount(result.unread_count);
+            } else {
+                if (container) container.innerHTML = "";
+                if (emptyState) emptyState.classList.remove("hidden");
+                updateUnreadCount(0);
+            }
+        } catch (err) {
+            console.warn("[Notifications] Failed to load notifications:", err);
+            if (loadingState) loadingState.classList.add("hidden");
+            if (emptyState) emptyState.classList.remove("hidden");
+        }
+    }
+
+    // Mark Single Notification as Read
+    async function markSingleAsRead(id, dotElement) {
+        if (dotElement) dotElement.classList.add("hidden");
+        updateUnreadCount();
+
+        if (!window.PusherConfig?.markReadUrl || !id) return;
+
+        try {
+            await fetch(window.PusherConfig.markReadUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": csrfToken,
+                },
+                body: JSON.stringify({ id: id })
+            });
+        } catch (err) {
+            console.warn("[Notifications] Error marking notification as read:", err);
+        }
+    }
+
+    // Mark All as Read
+    async function markAllAsRead() {
+        if (!container) return;
+        const unreadDots = container.querySelectorAll("[data-unread-dot]");
+        unreadDots.forEach(dot => dot.classList.add("hidden"));
+        updateUnreadCount(0);
+
+        if (!window.PusherConfig?.markAllReadUrl) return;
+
+        try {
+            await fetch(window.PusherConfig.markAllReadUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": csrfToken,
+                }
+            });
+        } catch (err) {
+            console.warn("[Notifications] Error marking all notifications as read:", err);
+        }
+    }
+
+    // Delete Single Notification
+    async function deleteSingleNotification(notifElement) {
+        if (!notifElement) return;
+        const id = notifElement.getAttribute("data-notif-id");
+
+        notifElement.style.opacity = "0";
+        notifElement.style.transform = "translateX(20px)";
+        setTimeout(() => {
+            notifElement.remove();
+            updateUnreadCount();
+            if (container && container.children.length === 0 && emptyState) {
+                emptyState.classList.remove("hidden");
+            }
+        }, 200);
+
+        if (!window.PusherConfig?.destroyUrl || !id) return;
+
+        try {
+            await fetch(window.PusherConfig.destroyUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": csrfToken,
+                },
+                body: JSON.stringify({ id: id })
+            });
+        } catch (err) {
+            console.warn("[Notifications] Error deleting notification:", err);
+        }
+    }
+
+    // Clear All Notifications
+    async function clearAllNotifications() {
+        if (!container) return;
+        container.innerHTML = "";
+        if (emptyState) emptyState.classList.remove("hidden");
+        updateUnreadCount(0);
+        processedNotifIds.clear();
+
+        if (!window.PusherConfig?.destroyAllUrl) return;
+
+        try {
+            await fetch(window.PusherConfig.destroyAllUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": csrfToken,
+                }
+            });
+        } catch (err) {
+            console.warn("[Notifications] Error clearing notifications:", err);
+        }
+    }
+
+    // Listeners
+    trigger.addEventListener("click", (e) => {
+        e.preventDefault();
+        openDrawer();
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener("click", closeDrawer);
+    }
+
+    if (backdrop) {
+        backdrop.addEventListener("click", closeDrawer);
+    }
+
+    // Close on ESC key
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            closeDrawer();
+        }
+    });
+
+    if (markAllBtn) {
+        markAllBtn.addEventListener("click", markAllAsRead);
+    }
+
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener("click", clearAllNotifications);
+    }
+
+    // Handle individual notification click (Mark Read / Delete / Open Enquiry)
+    if (container) {
+        container.addEventListener("click", (e) => {
+            const notifItem = e.target.closest("[data-notif-id]");
+            if (!notifItem) return;
+
+            // Delete action button clicked
+            const deleteBtn = e.target.closest('[data-action="delete-single"]');
+            if (deleteBtn) {
+                e.stopPropagation();
+                deleteSingleNotification(notifItem);
+                return;
+            }
+
+            // If user clicked any link inside the notification (e.g. title or "View Details")
+            const link = e.target.closest("a");
+            if (link) {
+                // Delete/dismiss this notification so it's removed immediately from drawer
+                const id = notifItem.getAttribute("data-notif-id");
+                if (id && window.PusherConfig?.destroyUrl) {
+                    fetch(window.PusherConfig.destroyUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                            "X-CSRF-TOKEN": csrfToken,
+                        },
+                        body: JSON.stringify({ id: id }),
+                        keepalive: true,
+                    }).catch(() => {});
+                }
+                return;
+            }
+
+            // Normal click on notification card to mark as read
+            const id = notifItem.getAttribute("data-notif-id");
+            const dot = notifItem.querySelector("[data-unread-dot]");
+            if (dot && !dot.classList.contains("hidden")) {
+                markSingleAsRead(id, dot);
+            }
+        });
+    }
+
+    // Initialize Pusher Client Connection (Subscribes to single channel with deduplicated event binding)
+    if (window.PusherConfig && window.PusherConfig.key) {
+        try {
+            const pusher = new Pusher(window.PusherConfig.key, {
+                cluster: window.PusherConfig.cluster || "mt1",
+                authEndpoint: window.PusherConfig.authEndpoint || "/broadcasting/auth",
+                auth: {
+                    headers: {
+                        "X-CSRF-TOKEN": csrfToken,
+                    },
+                },
+                forceTLS: true,
+            });
+
+            function handleNotificationEvent(data) {
+                const notif = data?.notification || data;
+                if (notif && (notif.title || notif.message)) {
+                    addNotificationItem(notif, true);
+                }
+            }
+
+            // Subscribe to private channel (with fallback if not auth'd)
+            const channel = pusher.subscribe("private-admin.notifications");
+            channel.bind("notification.created", handleNotificationEvent);
+
+            channel.bind("pusher:subscription_error", (status) => {
+                console.warn("[Pusher] Private channel subscription error, falling back to public channel:", status);
+                const publicChannel = pusher.subscribe("admin-notifications");
+                publicChannel.bind("notification.created", handleNotificationEvent);
+            });
+
+            pusher.connection.bind("connected", () => {
+                console.log("[Pusher] Real-time notification channel connected successfully.");
+            });
+
+            pusher.connection.bind("error", (err) => {
+                console.warn("[Pusher] Connection error:", err);
+            });
+        } catch (err) {
+            console.warn("[Pusher] Failed to initialize Pusher instance:", err);
+        }
+    }
+
+    // Initialize initial state on page load
+    loadNotifications();
+    syncSoundVisuals();
+});

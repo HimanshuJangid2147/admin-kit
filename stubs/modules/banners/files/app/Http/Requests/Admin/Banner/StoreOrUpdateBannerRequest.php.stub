@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Http\Requests\Admin\Banner;
+
+use App\Http\Requests\Concerns\HasImageValidation;
+use App\Repositories\Admin\Interface\BannerRepositoryInterface;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+
+class StoreOrUpdateBannerRequest extends FormRequest
+{
+    use HasImageValidation;
+
+    public function authorize(): bool
+    {
+        return Auth::guard('admin')->check();
+    }
+
+    public function rules(): array
+    {
+        return [
+            'eyebrow_text' => 'nullable|array',
+            'eyebrow_text.en' => 'nullable|string',
+            'eyebrow_text.*' => 'nullable|string',
+            'title' => 'required|array',
+            'title.en' => 'required|string',
+            'title.*' => 'nullable|string',
+            'description' => 'nullable|array',
+            'description.en' => 'nullable|string|max:150',
+            'description.*' => 'nullable|string|max:150',
+            'for_page' => 'required|string',
+            'image' => $this->imageOrStagedUuid(self::IMAGE_STANDARD),
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'title.required' => statictranslations('The title field is required.'),
+            'title.en.required' => statictranslations('The English title is required.'),
+            'for_page.required' => statictranslations('The target page selection is required.'),
+            'image.required' => statictranslations('The banner image is required.'),
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'eyebrow_text' => statictranslations('Eyebrow Text'),
+            'eyebrow_text.en' => statictranslations('eyebrow text (English)'),
+            'eyebrow_text.ru' => statictranslations('eyebrow text (Russian)'),
+            'eyebrow_text.kk' => statictranslations('eyebrow text (Kazakh)'),
+            'title' => statictranslations('Title'),
+            'title.en' => statictranslations('title (English)'),
+            'title.ru' => statictranslations('title (Russian)'),
+            'title.kk' => statictranslations('title (Kazakh)'),
+            'description' => statictranslations('Description'),
+            'description.en' => statictranslations('description (English)'),
+            'description.ru' => statictranslations('description (Russian)'),
+            'description.kk' => statictranslations('description (Kazakh)'),
+            'for_page' => statictranslations('Target Page'),
+            'image' => statictranslations('Banner Image'),
+        ];
+    }
+
+    public function prepareForValidation(): void
+    {
+        $eyebrow = is_string($this->eyebrow_text) ? ['en' => $this->eyebrow_text] : ($this->eyebrow_text ?? []);
+        $title = is_string($this->title) ? ['en' => $this->title] : ($this->title ?? []);
+        $description = is_string($this->description) ? ['en' => $this->description] : ($this->description ?? []);
+
+        $this->merge([
+            'eyebrow_text' => $eyebrow,
+            'title' => $title,
+            'description' => $description,
+            'for_page' => $this->for_page,
+        ]);
+    }
+
+    /**
+     * Handle conditional validation: Image is required when creating a new page banner.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $forPage = $this->input('for_page');
+            if (! $forPage) {
+                return;
+            }
+
+            $bannerRepo = app(BannerRepositoryInterface::class);
+            $existingBanner = $bannerRepo->findByPage($forPage);
+
+            if (! $existingBanner && ! $this->hasFile('image') && ! $this->filled('image')) {
+                $validator->errors()->add(
+                    'image',
+                    statictranslations('An image is required when creating a new banner.')
+                );
+            }
+        });
+    }
+}

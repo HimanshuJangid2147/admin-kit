@@ -1,0 +1,13 @@
+<?php
+
+return [
+    [
+        'group' => 'System Administration',
+        'label' => 'Site Settings',
+        'route' => 'admin.settings.index',
+        'active' => 'admin.settings.*',
+        'icon' => 'fa-solid fa-sliders',
+        'permission' => 'settings.read',
+        'order' => 90,
+    ],
+];

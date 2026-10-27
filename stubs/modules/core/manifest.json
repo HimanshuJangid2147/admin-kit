@@ -1,0 +1,54 @@
+{
+    "name": "core",
+    "description": "Base admin layout, navigation, AdminRequest, translations, and shared components",
+    "requires": [],
+    "files": {
+        "config/admin.php.stub": "config/admin.php",
+        "config/translations.php.stub": "config/translations.php",
+        "app/Helpers/StaticTranslatorHelper.php.stub": "app/Helpers/StaticTranslatorHelper.php",
+        "app/Helpers/translation.php.stub": "app/Helpers/translation.php",
+        "app/Services/NavigationService.php.stub": "app/Services/NavigationService.php",
+        "app/Navigation/core.php.stub": "app/Navigation/core.php",
+        "app/Http/Requests/Admin/AdminRequest.php.stub": "app/Http/Requests/Admin/AdminRequest.php",
+        "app/Services/TranslationService.php.stub": "app/Services/TranslationService.php",
+        "app/Http/Controllers/Admin/TranslationController.php.stub": "app/Http/Controllers/Admin/TranslationController.php",
+        "app/Http/Requests/Admin/Translate/TranslationsRequest.php.stub": "app/Http/Requests/Admin/Translate/TranslationsRequest.php",
+        "app/Providers/AdminViewServiceProvider.php.stub": "app/Providers/AdminViewServiceProvider.php",
+        "routes/admin.php.stub": "routes/admin.php",
+        "resources/views/layouts/app.blade.php.stub": "resources/views/layouts/app.blade.php",
+        "resources/views/partials/header.blade.php.stub": "resources/views/partials/header.blade.php",
+        "resources/views/partials/sidebar.blade.php.stub": "resources/views/partials/sidebar.blade.php",
+        "resources/views/partials/footer.blade.php.stub": "resources/views/partials/footer.blade.php",
+        "resources/views/components/page-header.blade.php.stub": "resources/views/components/page-header.blade.php",
+        "resources/views/components/button.blade.php.stub": "resources/views/components/button.blade.php",
+        "resources/views/components/alert.blade.php.stub": "resources/views/components/alert.blade.php",
+        "resources/views/components/empty-state.blade.php.stub": "resources/views/components/empty-state.blade.php",
+        "resources/views/components/icon-picker.blade.php.stub": "resources/views/components/icon-picker.blade.php",
+        "resources/views/components/admin/highlight-row.blade.php.stub": "resources/views/components/admin/highlight-row.blade.php"
+    },
+    "migrations": {},
+    "env": {
+        "ADMIN_BRAND_NAME": "Admin Studio",
+        "ADMIN_SHORT_NAME": "AS",
+        "ADMIN_ROUTE_PREFIX": "admin",
+        "ADMIN_GUARD": "admin",
+        "ADMIN_LOCALES": "en,ru,kk",
+        "ADMIN_AUTO_TRANSLATE": "true"
+    },
+    "providers": [
+        "App\\Providers\\AdminViewServiceProvider"
+    ],
+    "composer": [
+        "stichoza/google-translate-php",
+        "mews/purifier"
+    ],
+    "npm": [
+        "@fortawesome/fontawesome-free"
+    ],
+    "notes": [
+        "Define an 'admin' guard in config/auth.php and a route named admin.dashboard.",
+        "Include the sidebar with @include('partials.sidebar').",
+        "Add route 'translations/auto-fill' if you use the auto-translation endpoint.",
+        "Ensure FontAwesome CSS is imported in resources/css/app.css: @import '@fortawesome/fontawesome-free/css/all.min.css';"
+    ]
+}

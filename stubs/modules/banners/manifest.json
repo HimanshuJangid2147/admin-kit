@@ -1,0 +1,34 @@
+{
+    "name": "banners",
+    "description": "Page hero banner management with direct and chunked staged uploads and trilingual translations.",
+    "requires": [
+        "core",
+        "uploads"
+    ],
+    "files": {
+        "app/Models/Banner.php.stub": "app/Models/Banner.php",
+        "app/Repositories/Admin/Interface/BannerRepositoryInterface.php.stub": "app/Repositories/Admin/Interface/BannerRepositoryInterface.php",
+        "app/Repositories/Admin/Repositories/BannerRepository.php.stub": "app/Repositories/Admin/Repositories/BannerRepository.php",
+        "app/Services/BannerService.php.stub": "app/Services/BannerService.php",
+        "app/Http/Controllers/Admin/BannerController.php.stub": "app/Http/Controllers/Admin/BannerController.php",
+        "app/Http/Requests/Admin/Banner/StoreOrUpdateBannerRequest.php.stub": "app/Http/Requests/Admin/Banner/StoreOrUpdateBannerRequest.php",
+        "app/Providers/AdminBannerServiceProvider.php.stub": "app/Providers/AdminBannerServiceProvider.php",
+        "routes/admin/banners.php.stub": "routes/admin/banners.php",
+        "resources/views/partials/banner-upload-modal.blade.php.stub": "resources/views/partials/banner-upload-modal.blade.php",
+        "resources/js/pageBanner.js.stub": "resources/js/pageBanner.js"
+    },
+    "migrations": {
+        "database/migrations/create_banners_table.php.stub": "create_banners_table"
+    },
+    "env": {
+        "ADMIN_BANNERS": "true"
+    },
+    "providers": [
+        "App\\Providers\\AdminBannerServiceProvider"
+    ],
+    "notes": [
+        "Run php artisan migrate to create the banners table.",
+        "Include the banner modal with @include('partials.banner-upload-modal') in views that allow changing hero banners.",
+        "Import resources/js/pageBanner.js in your app entry point (e.g. resources/js/app.js)."
+    ]
+}

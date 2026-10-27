@@ -1,0 +1,226 @@
+import $ from 'jquery';
+
+const trans = window.trans || ((k) => k);
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Toggle Visual State
+───────────────────────────────────────────────────────────────────────────── */
+function syncToggleVisuals(scope) {
+    const parent = scope || document;
+    const switches = parent.classList && parent.classList.contains('dt-switch')
+        ? [parent]
+        : parent.querySelectorAll('.dt-switch');
+
+    switches.forEach(wrap => {
+        const input = wrap.querySelector('input[type="checkbox"]');
+        if (!input) return;
+        const track = wrap.querySelector('.dt-switch-track');
+        const thumb = wrap.querySelector('.dt-switch-thumb');
+        const label = wrap.querySelector('.dt-switch-label');
+        const labelOn = wrap.querySelector('[data-label-on]');
+        const labelOff = wrap.querySelector('[data-label-off]');
+
+        if (input.checked) {
+            track?.classList.add('is-on');
+            thumb?.classList.add('is-on');
+            label?.classList.add('is-on');
+            labelOn?.classList.remove('hidden');
+            labelOff?.classList.add('hidden');
+        } else {
+            track?.classList.remove('is-on');
+            thumb?.classList.remove('is-on');
+            label?.classList.remove('is-on');
+            labelOn?.classList.add('hidden');
+            labelOff?.classList.remove('hidden');
+        }
+    });
+}
+window.syncToggleVisuals = syncToggleVisuals;
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. Toggle Status Switch (POST HTTP METHOD)
+───────────────────────────────────────────────────────────────────────────── */
+document.addEventListener('change', function (e) {
+    const input = e.target.closest('.dt-switch input[type="checkbox"]');
+    if (!input) return;
+
+    const wrap = input.closest('.dt-switch');
+    const url  = input.dataset.toggleUrl;
+    const id   = input.dataset.recordId;
+
+    if (!url || !id) return;
+
+    const newState = input.checked;
+    wrap?.classList.add('opacity-60', 'pointer-events-none');
+    syncToggleVisuals(wrap);
+
+    window.axios.post(url, { id })
+        .then((res) => {
+            if (res.data?.success === false) throw new Error(res.data.message);
+        })
+        .catch(() => {
+            input.checked = !newState; // Revert on failure
+            syncToggleVisuals(wrap);
+        })
+        .finally(() => {
+            wrap?.classList.remove('opacity-60', 'pointer-events-none');
+        });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. Delete Confirmation + AJAX (DELETE HTTP METHOD)
+───────────────────────────────────────────────────────────────────────────── */
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-dt-delete]');
+    if (!btn) return;
+
+    const url      = btn.dataset.deleteUrl;
+    const id       = btn.dataset.recordId;
+    const resource = btn.dataset.resource  || 'Record';
+    const label    = btn.dataset.label     || id;
+
+    if (!url || !id) return;
+
+    const doDelete = () => {
+        btn.disabled = true;
+        const origHTML = btn.innerHTML;
+        btn.innerHTML  = `<svg class="w-3.5 h-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2.5" d="M12 3a9 9 0 1 0 9 9"/></svg>`;
+
+        window.axios.delete(url, { data: { id: id } })
+            .then((res) => {
+                if (res.data?.success === false) throw new Error(res.data.message);
+
+                const row = btn.closest('tr');
+                if (!row) return;
+                const tableEl = row.closest('table');
+
+                if (tableEl && $.fn?.DataTable?.isDataTable(tableEl)) {
+                    $(tableEl).DataTable().row(row).remove().draw(false);
+                } else {
+                    row.remove();
+                }
+            })
+            .catch((err) => {
+                btn.disabled  = false;
+                btn.innerHTML = origHTML;
+                alert(err?.response?.data?.message || err.message || 'Delete operation failed.');
+            });
+    };
+
+    if (window.Swal) {
+        window.Swal.fire({
+            title:             trans('Delete') + ' ' + trans(resource) + '?',
+            html:              `<span class="text-sm text-muted-foreground">${trans('You are about to permanently remove')} <strong class="text-foreground">${label}</strong>.<br>${trans('This action cannot be undone.')}</span>`,
+            icon:              'warning',
+            background:        'var(--card)',
+            color:             'var(--foreground)',
+            showCancelButton:  true,
+            confirmButtonText: trans('Delete'),
+            cancelButtonText:  trans('Cancel'),
+            reverseButtons:    true,
+            focusCancel:       true,
+            buttonsStyling:    false,
+            customClass: {
+                popup:         '!rounded-2xl !border !border-border !shadow-2xl font-sans bg-card text-card-foreground',
+                title:         '!font-serif !italic !text-xl',
+                confirmButton: '!inline-flex !items-center !h-9 !px-5 !rounded-lg !bg-red-600 !text-white !text-xs !uppercase !tracking-[0.12em] !font-sans hover:!bg-red-700 !transition-colors',
+                cancelButton:  '!inline-flex !items-center !h-9 !px-5 !rounded-lg !bg-transparent !text-muted-foreground !border !border-border !text-xs !uppercase !tracking-[0.12em] !font-sans hover:!bg-muted !transition-colors',
+                actions:       '!gap-3',
+            },
+        }).then((result) => {
+            if (result.isConfirmed) doDelete();
+        });
+    } else {
+        if (confirm(`${trans('Delete')} ${trans(resource)}: ${label}?`)) {
+            doDelete();
+        }
+    }
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. Lightbox for Avatar Preview
+───────────────────────────────────────────────────────────────────────────── */
+function openLightbox(src, alt) {
+    const overlay = document.getElementById('dt-lightbox');
+    const img     = document.getElementById('dt-lightbox-img');
+    const caption = document.getElementById('dt-lightbox-caption');
+    const panel   = document.getElementById('dt-lightbox-panel');
+    if (!overlay || !src) return;
+
+    img.src               = src;
+    img.alt               = alt || '';
+    caption.textContent   = alt || '';
+    overlay.classList.remove('opacity-0', 'pointer-events-none');
+    overlay.classList.add('opacity-100');
+    panel?.classList.remove('scale-95');
+    panel?.classList.add('scale-100');
+    overlay.focus();
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    const overlay = document.getElementById('dt-lightbox');
+    const img     = document.getElementById('dt-lightbox-img');
+    const panel   = document.getElementById('dt-lightbox-panel');
+    if (!overlay) return;
+
+    overlay.classList.add('opacity-0', 'pointer-events-none');
+    overlay.classList.remove('opacity-100');
+    panel?.classList.add('scale-95');
+    panel?.classList.remove('scale-100');
+    document.body.style.overflow = '';
+    setTimeout(() => { if (img) img.src = ''; }, 300);
+}
+
+document.addEventListener('click', function (e) {
+    const trigger = e.target.closest('[data-lightbox-src]');
+    if (trigger) { openLightbox(trigger.dataset.lightboxSrc, trigger.dataset.lightboxAlt); return; }
+
+    if (e.target.closest('#dt-lightbox-close') || e.target.id === 'dt-lightbox') closeLightbox();
+});
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeLightbox(); return; }
+    const trigger = e.target.closest('[data-lightbox-src]');
+    if (trigger && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        openLightbox(trigger.dataset.lightboxSrc, trigger.dataset.lightboxAlt);
+    }
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. DataTable Global Defaults Configuration
+───────────────────────────────────────────────────────────────────────────── */
+if ($.fn.dataTable) {
+    $.extend(true, $.fn.dataTable.defaults, {
+        processing: true,
+        serverSide: true,
+        pageLength: 15,
+        lengthMenu: [[10, 15, 25, 50], [10, 15, 25, 50]],
+        dom:
+            "<'flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-5 border-b border-border/50'lf>" +
+            "<'overflow-visible w-full't>" +
+            "<'flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-5 border-t border-border/50'ip>",
+        language: {
+            search:            '',
+            searchPlaceholder: trans('Search records...'),
+            lengthMenu:        '_MENU_',
+            info:              trans('Showing') + ' ' + '&nbsp' + ' <span class="font-semibold text-foreground">_START_</span> ' + '&nbsp' + trans('to') + ' ' + '&nbsp' + ' <span class="font-semibold text-foreground">_END_</span> ' + '&nbsp' + trans('of') + ' ' + '&nbsp' + ' <span class="font-semibold text-foreground">_TOTAL_</span>',
+            infoEmpty:         trans('No records found'),
+            infoFiltered:      '(' + trans('filtered from _MAX_') + ')',
+        },
+        responsive: false,
+        autoWidth:  false,
+        initComplete: function () {
+            $(this.api().table().node()).addClass('dt-initialized');
+        },
+        drawCallback: function () {
+            const api = this.api();
+            const tableNode = api.table().node();
+            $(tableNode).addClass('dt-initialized');
+            if (window.syncToggleVisuals) {
+                window.syncToggleVisuals(api.table().container());
+            }
+        }
+    });
+}

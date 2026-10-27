@@ -1,0 +1,45 @@
+/*
+ * Preset: sovereign-silk-road (STTS-KAZ). Light tokens come from the STTS-KAZ design rules.
+ * Dark-mode values are PLACEHOLDERS: adjust them before shipping.
+ * Load the fonts separately (Cormorant Garamond, Plus Jakarta Sans).
+ */
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-accent: var(--accent);
+    --color-muted: var(--muted);
+    --color-border: var(--border);
+    --color-card: var(--card);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --font-heading: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+    --font-sans: "Plus Jakarta Sans", "Inter", sans-serif;
+}
+
+:root {
+    --background: oklch(0.985 0.005 130);
+    --foreground: oklch(0.18 0.02 240);
+    --primary: oklch(0.32 0.08 155);
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.75 0.12 85);
+    --muted: oklch(0.90 0.01 130);
+    --border: oklch(0.90 0.01 130);
+    --card: oklch(1 0 0);
+    --sidebar: oklch(0.985 0.005 130);
+    --sidebar-foreground: oklch(0.18 0.02 240);
+}
+
+.dark {
+    --background: oklch(0.14 0.02 155);
+    --foreground: oklch(0.97 0.005 130);
+    --primary: oklch(0.45 0.10 155);
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.75 0.12 85);
+    --muted: oklch(0.22 0.02 155);
+    --border: oklch(1 0 0 / 12%);
+    --card: oklch(0.18 0.02 155);
+    --sidebar: oklch(0.12 0.02 155);
+    --sidebar-foreground: oklch(0.97 0.005 130);
+}

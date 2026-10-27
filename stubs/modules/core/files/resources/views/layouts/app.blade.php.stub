@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ config('admin.brand.name', 'Admin Studio') }} - @yield('title', 'Admin Panel')</title>
+
+    {{-- Fast Inline Theme Sync --}}
+    <script>
+        (function() {
+            const stored = localStorage.getItem('theme') || 'system';
+            const isDark = stored === 'dark' || (stored === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+
+        @php
+            $notificationSoundUrl = null;
+            if (class_exists(\App\Models\Setting::class)) {
+                try {
+                    $globalSiteSettings = \App\Models\Setting::first();
+                    $notificationSoundUrl = !empty($globalSiteSettings?->notification_sound)
+                        ? \Illuminate\Support\Facades\Storage::disk(config('admin.uploads.disk', 'public'))->url($globalSiteSettings->notification_sound)
+                        : null;
+                } catch (\Throwable $e) {
+                    $notificationSoundUrl = null;
+                }
+            }
+        @endphp
+
+        window.PusherConfig = {
+            key: "{{ config('broadcasting.connections.pusher.key') }}",
+            cluster: "{{ config('broadcasting.connections.pusher.options.cluster') }}",
+            authEndpoint: "{{ url('/broadcasting/auth') }}",
+            indexUrl: "{{ \Illuminate\Support\Facades\Route::has('admin.notifications.index') ? route('admin.notifications.index') : '#' }}",
+            markReadUrl: "{{ \Illuminate\Support\Facades\Route::has('admin.notifications.mark-as-read') ? route('admin.notifications.mark-as-read') : '#' }}",
+            markAllReadUrl: "{{ \Illuminate\Support\Facades\Route::has('admin.notifications.mark-all-read') ? route('admin.notifications.mark-all-read') : '#' }}",
+            destroyUrl: "{{ \Illuminate\Support\Facades\Route::has('admin.notifications.destroy') ? route('admin.notifications.destroy') : '#' }}",
+            destroyAllUrl: "{{ \Illuminate\Support\Facades\Route::has('admin.notifications.destroy-all') ? route('admin.notifications.destroy-all') : '#' }}",
+            soundUrl: @json($notificationSoundUrl),
+        };
+    </script>
+
+    {{-- Favicon --}}
+    <link rel="icon" type="image/svg+xml" href="{{ asset(config('admin.brand.favicon', 'icons/favicon.svg')) }}">
+
+    {{-- Fonts --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    {{-- Tailwind CSS & JS bundle --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    @stack('head')
+</head>
+<body class="flex h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+
+    @include('partials.sidebar')
+
+    {{-- Mobile backdrop overlay --}}
+    <div id="sidebar-backdrop" class="fixed inset-0 z-45 bg-black/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 lg:hidden"></div>
+
+    {{-- Main content column --}}
+    <div class="flex flex-1 flex-col min-w-0">
+
+        @include('partials.header')
+
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            <div id="global-errors-alert-container" class="px-8 pt-6 {{ (isset($errors) && $errors->any()) ? '' : 'hidden' }}">
+                @if (isset($errors) && $errors->any())
+                    <x-alert type="danger">
+                        <ul class="list-disc list-inside space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </x-alert>
+                @endif
+            </div>
+            @yield('content')
+        </main>
+
+        @include('partials.footer')
+
+    @if (view()->exists('partials.notification-drawer'))
+        @include('partials.notification-drawer')
+    @endif
+    </div>
+
+    @stack('scripts')
+</body>
+</html>

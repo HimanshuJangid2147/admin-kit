@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Http\Requests\Admin\Role;
+
+use App\Http\Requests\Admin\AdminRequest;
+use Illuminate\Validation\Rule;
+
+class StoreRoleRequest extends AdminRequest
+{
+    protected function targetTable(): string
+    {
+        return 'roles';
+    }
+
+    public function authorize(): bool
+    {
+        return (bool) $this->adminUser()?->can('role.create');
+    }
+
+    public function rules(): array
+    {
+        $guard = config('admin.guard', 'admin');
+
+        return [
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('roles', 'name')->where('guard_name', $guard),
+            ],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['integer', 'exists:permissions,id'],
+        ];
+    }
+}

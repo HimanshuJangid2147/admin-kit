@@ -1,0 +1,35 @@
+@props(['index'])
+
+@php
+    $t = fn ($text) => function_exists('statictranslations') ? statictranslations($text) : __($text);
+    $supportedLocales = config('translations.supported_locales', config('admin.locales.supported', ['en', 'ru', 'kk']));
+    $defaultLocale = config('translations.default_locale', config('admin.locales.default', 'en'));
+@endphp
+
+<div class="highlight-row border border-border/40 rounded-lg px-2.5 py-1.5 bg-card hover:border-primary/50 transition-all duration-200 flex items-center gap-2 font-sans group" data-index="{{ $index }}">
+    <div class="drag-handle shrink-0 cursor-grab active:cursor-grabbing p-1 text-muted-foreground/30 hover:text-primary transition-colors" title="{{ $t('Drag to reorder') }}">
+        <i class="fa-solid fa-grip-vertical text-[10px]"></i>
+    </div>
+
+    <span class="shrink-0 text-[10px] font-bold text-primary/80 min-w-[20px]">#<span class="highlight-display-num">{{ $index + 1 }}</span></span>
+
+    <div class="flex-1 min-w-0">
+        @foreach ($supportedLocales as $locale)
+            <div class="tab-content-highlight-{{ $locale }}-{{ $index }} {{ $locale === $defaultLocale ? '' : 'hidden' }}">
+                <input
+                    type="text"
+                    name="highlights[{{ $index }}][highlight][{{ $locale }}]"
+                    @if ($locale === $defaultLocale) required @endif
+                    class="h-7 w-full rounded border-0 bg-transparent px-1.5 text-xs text-foreground placeholder:text-muted-foreground/35 focus:ring-1 focus:ring-primary/40 focus:bg-muted/10 focus:outline-none transition-all"
+                    placeholder="{{ $t('Highlight in') }} {{ strtoupper($locale) }}..."
+                >
+            </div>
+        @endforeach
+    </div>
+
+    <input type="hidden" name="highlights[{{ $index }}][sort_order]" value="{{ $index }}" class="highlight-sort-input">
+
+    <button type="button" class="remove-highlight-btn shrink-0 h-6 w-6 rounded text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-all cursor-pointer" title="{{ $t('Remove') }}">
+        <i class="fa-solid fa-xmark text-[11px]"></i>
+    </button>
+</div>

@@ -1,0 +1,32 @@
+{
+    "name": "hj4104/admin-kit",
+    "description": "Installer that copies your reusable admin base code (nav, requests, theme, RBAC) into a new Laravel app.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "illuminate/console": "^11.0|^12.0|^13.0",
+        "illuminate/support": "^11.0|^12.0|^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AdminKit\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AdminKit\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AdminKit\\AdminKitServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "require-dev": {
+        "phpunit/phpunit": "^13.4"
+    }
+}

@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Translatable\Attributes\Translatable;
+use Spatie\Translatable\HasTranslations;
+
+#[Table('site_settings')]
+#[Fillable([
+    'site_quote',
+    'address',
+    'std_code',
+    'phone',
+    'email',
+    'facebook_link',
+    'instagram_link',
+    'linkedin_link',
+    'pdf_one_name',
+    'pdf_one',
+    'pdf_one_image',
+    'pdf_two_name',
+    'pdf_two',
+    'pdf_two_image',
+    'maintenance_mode',
+    'meta_title',
+    'meta_description',
+    'meta_image',
+    'notification_sound',
+])]
+#[Hidden(['created_at', 'updated_at', 'deleted_at'])]
+#[Translatable([
+    'site_quote',
+    'meta_title',
+    'meta_description',
+    'pdf_one_name',
+    'pdf_two_name',
+])]
+class Setting extends Model
+{
+    use HasFactory, HasTranslations, SoftDeletes;
+}

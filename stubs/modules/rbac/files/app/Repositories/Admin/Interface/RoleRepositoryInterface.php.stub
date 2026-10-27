@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Repositories\Admin\Interface;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Role;
+
+interface RoleRepositoryInterface
+{
+    public function create(array $data): Role;
+
+    public function update(int $id, array $data): Role;
+
+    public function delete(int $id): bool;
+
+    public function getByGuard(string $guardName): Collection;
+
+    public function getRolesList(?string $term = null): Collection;
+
+    public function datatable(array $filters = []): Builder;
+
+    public function findByIds(array $ids): Collection;
+}

@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Repositories\Admin\Interface;
+
+interface SettingsRepositoryInterface
+{
+    public function getSettings();
+
+    public function createOrUpdateSettings(array $data);
+
+    public function maintenanceModeToggle(array $data = []);
+
+    public function getMaintenanceMode();
+
+    public function checkSettingsExists();
+}

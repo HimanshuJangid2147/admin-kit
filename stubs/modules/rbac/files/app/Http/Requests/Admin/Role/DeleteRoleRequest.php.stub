@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Requests\Admin\Role;
+
+use App\Http\Requests\Admin\AdminRequest;
+use Spatie\Permission\Models\Role;
+
+class DeleteRoleRequest extends AdminRequest
+{
+    protected function targetTable(): string
+    {
+        return 'roles';
+    }
+
+    public function authorize(): bool
+    {
+        $admin = $this->adminUser();
+        if (! $admin || ! $admin->can('role.delete')) {
+            return false;
+        }
+
+        $id = $this->resolveId();
+        if (! $id) {
+            return true;
+        }
+
+        $role = Role::find($id);
+        if (! $role) {
+            return true;
+        }
+
+        // Super-admin role can never be deleted
+        if ($role->name === 'super-admin') {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return $this->idRules();
+    }
+}

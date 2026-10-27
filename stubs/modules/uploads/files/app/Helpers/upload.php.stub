@@ -1,0 +1,36 @@
+<?php
+
+use App\Services\UploadStagingService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+if (! function_exists('handle_image_upload')) {
+    /**
+     * Reusable global helper to handle image assignment from an UploadedFile or a staged upload UUID.
+     * Automatically deletes old image if a new image is provided.
+     *
+     * @param  UploadedFile|string|null  $fileOrUuid
+     */
+    function handle_image_upload(mixed $fileOrUuid, string $targetDirectory, ?string $oldImagePath = null): ?string
+    {
+        if (empty($fileOrUuid)) {
+            return null;
+        }
+
+        $disk = config('admin.uploads.disk', 'public');
+        $newPath = null;
+
+        if ($fileOrUuid instanceof UploadedFile) {
+            $newPath = Storage::disk($disk)->putFile($targetDirectory, $fileOrUuid);
+        } elseif (is_string($fileOrUuid)) {
+            $stagingService = app(UploadStagingService::class);
+            $newPath = $stagingService->commitUpload($fileOrUuid, $targetDirectory);
+        }
+
+        if ($newPath && $oldImagePath && Storage::disk($disk)->exists($oldImagePath)) {
+            Storage::disk($disk)->delete($oldImagePath);
+        }
+
+        return $newPath;
+    }
+}

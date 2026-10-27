@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Http\Requests\Admin\Role;
+
+use App\Http\Requests\Admin\AdminRequest;
+
+class ListRoleRequest extends AdminRequest
+{
+    protected function targetTable(): string
+    {
+        return 'roles';
+    }
+
+    public function authorize(): bool
+    {
+        return (bool) $this->adminUser()?->can('role.read');
+    }
+
+    public function rules(): array
+    {
+        return [];
+    }
+}

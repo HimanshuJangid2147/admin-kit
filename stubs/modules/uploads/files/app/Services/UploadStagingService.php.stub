@@ -1,0 +1,343 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\UploadStaging;
+use App\Repositories\Admin\Interface\UploadStagingRepositoryInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+
+class UploadStagingService
+{
+    public function __construct(
+        protected UploadStagingRepositoryInterface $stagingRepo,
+        protected ChunkService $chunkService,
+        protected ImageProcessorService $imageProcessor
+    ) {}
+
+    /**
+     * Store a direct (non-chunked) file in temporary storage.
+     */
+    public function storeDirect(UploadedFile $file, string $profileName = 'image'): UploadStaging
+    {
+        $profile = $this->resolveProfile($profileName, $file->getClientOriginalExtension());
+        $uuid = (string) Str::uuid();
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'bin');
+        $originalName = $file->getClientOriginalName();
+        $mimeType = $file->getMimeType() ?: 'application/octet-stream';
+        $size = $file->getSize();
+
+        $this->validateTypeAttributes($extension, $mimeType, $profile);
+
+        $tempDirectory = storage_path('app/uploads/temp');
+        if (! File::exists($tempDirectory)) {
+            File::makeDirectory($tempDirectory, 0755, true);
+        }
+
+        $fileName = "{$uuid}.{$extension}";
+        $fullPath = "{$tempDirectory}/{$fileName}";
+
+        return DB::transaction(function () use ($file, $tempDirectory, $fileName, $fullPath, $uuid, $originalName, $profile) {
+            $file->move($tempDirectory, $fileName);
+
+            try {
+                $processed = $this->applyProfileProcessing($fullPath, $profile);
+                $finalFullPath = $processed['path'];
+                $finalMime = $processed['mime'];
+                $finalExtension = $processed['extension'];
+                $finalSize = $processed['size'];
+
+                $this->validateSize($finalSize, $profile);
+
+                $checksum = $this->chunkService->calculateChecksum($finalFullPath);
+                $relativePath = 'uploads/temp/'.basename($finalFullPath);
+
+                return $this->stagingRepo->create([
+                    'uuid' => $uuid,
+                    'disk' => 'public',
+                    'temp_path' => $relativePath,
+                    'original_name' => $originalName,
+                    'mime_type' => $finalMime,
+                    'extension' => $finalExtension,
+                    'size' => $finalSize,
+                    'checksum' => $checksum,
+                    'status' => 'completed',
+                    'created_by' => Auth::guard('admin')->id() ?? Auth::id(),
+                ]);
+            } catch (\Throwable $e) {
+                if (File::exists($fullPath)) {
+                    File::delete($fullPath);
+                }
+                throw $e;
+            }
+        });
+    }
+
+    /**
+     * Store a chunk slice for an ongoing chunked upload.
+     */
+    public function storeChunkSlice(UploadedFile $chunk, string $uuid, int $chunkIndex, int $totalChunks, string $originalName, string $profileName = 'image'): UploadStaging
+    {
+        $staging = $this->stagingRepo->findByUuid($uuid);
+
+        if (! $staging) {
+            try {
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION) ?: 'bin');
+                $mimeType = $chunk->getMimeType() ?: 'application/octet-stream';
+
+                $staging = $this->stagingRepo->create([
+                    'uuid' => $uuid,
+                    'disk' => 'public',
+                    'temp_path' => "uploads/chunks/{$uuid}",
+                    'original_name' => $originalName,
+                    'mime_type' => $mimeType,
+                    'extension' => $extension,
+                    'size' => 0,
+                    'status' => 'uploading',
+                    'created_by' => Auth::guard('admin')->id() ?? Auth::id(),
+                ]);
+            } catch (UniqueConstraintViolationException $e) {
+                $staging = $this->stagingRepo->findByUuid($uuid);
+            }
+        }
+
+        $userId = Auth::guard('admin')->id() ?? Auth::id();
+        if ($staging && $staging->created_by && (int) $staging->created_by !== (int) $userId) {
+            throw new HttpException(403, statictranslations('Unauthorized upload operation.'));
+        }
+
+        $this->chunkService->storeChunkSlice($chunk, $uuid, $chunkIndex);
+
+        return $staging;
+    }
+
+    /**
+     * Complete and merge chunks for a chunked upload.
+     */
+    public function completeChunkUpload(string $uuid, int $totalChunks, string $originalName, int $totalSize, string $profileName = 'image'): UploadStaging
+    {
+        $lockKey = "upload-complete:{$uuid}";
+        $lock = Cache::lock($lockKey, 15);
+
+        if (! $lock->get()) {
+            throw new \RuntimeException(statictranslations('Upload assembly in progress. Please retry shortly.'));
+        }
+
+        try {
+            $staging = $this->stagingRepo->findByUuid($uuid);
+            if ($staging && $staging->status === 'completed') {
+                return $staging;
+            }
+
+            $userId = Auth::guard('admin')->id() ?? Auth::id();
+            if ($staging && $staging->created_by && (int) $staging->created_by !== (int) $userId) {
+                throw new HttpException(403, statictranslations('Unauthorized upload operation.'));
+            }
+
+            $profile = $this->resolveProfile($profileName, pathinfo($originalName, PATHINFO_EXTENSION));
+            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION) ?: 'bin');
+
+            if ($staging && $staging->extension !== $extension) {
+                throw new \InvalidArgumentException(statictranslations('The extension does not match the uploaded chunk staging extension.'));
+            }
+
+            $relativePath = $this->chunkService->mergeChunks($uuid, $totalChunks, $extension);
+            $fullPath = storage_path("app/{$relativePath}");
+
+            $actualSize = File::size($fullPath);
+            $mimeType = File::mimeType($fullPath) ?: 'application/octet-stream';
+
+            try {
+                $this->validateTypeAttributes($extension, $mimeType, $profile);
+
+                $rawCeiling = ($profile['max_size'] ?? 5242880) * 4;
+                if ($actualSize > $rawCeiling) {
+                    throw new \InvalidArgumentException(statictranslations('The uploaded file exceeds the maximum size limit.'));
+                }
+
+                $processed = $this->applyProfileProcessing($fullPath, $profile);
+                $finalFullPath = $processed['path'];
+                $finalMime = $processed['mime'];
+                $finalExtension = $processed['extension'];
+                $finalSize = $processed['size'];
+
+                $this->validateSize($finalSize, $profile);
+
+                $checksum = $this->chunkService->calculateChecksum($finalFullPath);
+                $finalRelativePath = 'uploads/temp/'.basename($finalFullPath);
+
+                if ($staging) {
+                    $staging->update([
+                        'temp_path' => $finalRelativePath,
+                        'original_name' => $originalName,
+                        'mime_type' => $finalMime,
+                        'extension' => $finalExtension,
+                        'size' => $finalSize,
+                        'checksum' => $checksum,
+                        'status' => 'completed',
+                    ]);
+                } else {
+                    $staging = $this->stagingRepo->create([
+                        'uuid' => $uuid,
+                        'disk' => 'public',
+                        'temp_path' => $finalRelativePath,
+                        'original_name' => $originalName,
+                        'mime_type' => $finalMime,
+                        'extension' => $finalExtension,
+                        'size' => $finalSize,
+                        'checksum' => $checksum,
+                        'status' => 'completed',
+                        'created_by' => Auth::guard('admin')->id() ?? Auth::id(),
+                    ]);
+                }
+
+                return $staging;
+            } catch (\Throwable $e) {
+                if (File::exists($fullPath)) {
+                    File::delete($fullPath);
+                }
+                $this->chunkService->deleteChunkSlices($uuid);
+                if ($staging) {
+                    $this->stagingRepo->updateStatus($uuid, 'failed');
+                }
+                throw $e;
+            }
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * Commit a completed staged upload by copying/moving it to final domain disk path and setting status to 'committed'.
+     */
+    public function commitUpload(string $uuid, string $targetDirectory): ?string
+    {
+        $staging = $this->stagingRepo->findByUuid($uuid);
+        if (! $staging || $staging->status !== 'completed') {
+            return null;
+        }
+
+        $userId = Auth::guard('admin')->id() ?? Auth::id();
+        if ($staging->created_by && (int) $staging->created_by !== (int) $userId) {
+            throw new HttpException(403, statictranslations('Unauthorized upload operation.'));
+        }
+
+        $sourceFullPath = storage_path("app/{$staging->temp_path}");
+        if (! File::exists($sourceFullPath)) {
+            $sourceFullPath = storage_path("app/public/{$staging->temp_path}");
+        }
+
+        if (! File::exists($sourceFullPath)) {
+            $this->stagingRepo->updateStatus($uuid, 'failed');
+
+            return null;
+        }
+
+        $destinationFileName = "{$staging->uuid}.{$staging->extension}";
+        $destinationRelativePath = rtrim($targetDirectory, '/').'/'.$destinationFileName;
+
+        Storage::disk($staging->disk)->put($destinationRelativePath, File::get($sourceFullPath));
+
+        if (File::exists($sourceFullPath)) {
+            File::delete($sourceFullPath);
+        }
+        $this->chunkService->deleteChunkSlices($uuid);
+        $this->stagingRepo->deleteByUuid($uuid);
+
+        return $destinationRelativePath;
+    }
+
+    /**
+     * Delete staging upload files and record.
+     */
+    public function cancelUpload(string $uuid): bool
+    {
+        $staging = $this->stagingRepo->findByUuid($uuid);
+        if ($staging) {
+            $userId = Auth::guard('admin')->id() ?? Auth::id();
+            if ($staging->created_by && (int) $staging->created_by !== (int) $userId) {
+                throw new HttpException(403, statictranslations('Unauthorized upload operation.'));
+            }
+
+            $fullPath = storage_path("app/{$staging->temp_path}");
+            if (File::exists($fullPath)) {
+                if (File::isDirectory($fullPath)) {
+                    File::deleteDirectory($fullPath);
+                } else {
+                    File::delete($fullPath);
+                }
+            }
+            $this->chunkService->deleteChunkSlices($uuid);
+
+            return $this->stagingRepo->deleteByUuid($uuid);
+        }
+
+        return false;
+    }
+
+    protected function resolveProfile(string $profileName, ?string $extension): array
+    {
+        $profiles = config('uploads.profiles', []);
+        if (isset($profiles[$profileName])) {
+            return $profiles[$profileName];
+        }
+
+        if ($extension) {
+            $ext = strtolower($extension);
+            foreach ($profiles as $prof) {
+                if (in_array($ext, $prof['extensions'] ?? [], true)) {
+                    return $prof;
+                }
+            }
+        }
+
+        return $profiles['image'] ?? [
+            'extensions' => ['jpeg', 'jpg', 'png', 'gif', 'webp', 'avif'],
+            'mimes' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'],
+            'max_size' => 5242880,
+        ];
+    }
+
+    protected function validateTypeAttributes(string $extension, string $mimeType, array $profile): void
+    {
+        $allowedExts = array_map('strtolower', $profile['extensions'] ?? []);
+        if (! in_array(strtolower($extension), $allowedExts, true)) {
+            throw new \InvalidArgumentException(statictranslations('The uploaded file extension is not allowed.'));
+        }
+
+        $allowedMimes = $profile['mimes'] ?? [];
+        if (! in_array($mimeType, $allowedMimes, true)) {
+            throw new \InvalidArgumentException(statictranslations('The uploaded file type is not allowed.'));
+        }
+    }
+
+    protected function validateSize(int $size, array $profile): void
+    {
+        $maxSize = $profile['max_size'] ?? 5242880;
+        if ($size > $maxSize) {
+            throw new \InvalidArgumentException(statictranslations('The uploaded file exceeds the maximum size limit.'));
+        }
+    }
+
+    protected function applyProfileProcessing(string $filePath, array $profile): array
+    {
+        if (! empty($profile['process_image'])) {
+            return $this->imageProcessor->processImage($filePath, 1920, true);
+        }
+
+        return [
+            'processed' => false,
+            'path' => $filePath,
+            'mime' => File::mimeType($filePath) ?: 'application/octet-stream',
+            'extension' => strtolower(pathinfo($filePath, PATHINFO_EXTENSION)),
+            'size' => File::size($filePath),
+        ];
+    }
+}

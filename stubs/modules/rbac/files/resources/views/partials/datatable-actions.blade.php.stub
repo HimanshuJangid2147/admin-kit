@@ -1,0 +1,36 @@
+<div class="flex items-center justify-end gap-1.5">
+    @if(!empty($view_url))
+        <a
+            href="{{ $view_url }}"
+            class="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700/50 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100 shadow-sm transition-all duration-200"
+            title="{{ statictranslations('View') }}"
+        >
+            <x-lucide-eye class="w-3.5 h-3.5" />
+        </a>
+    @endif
+
+    @if(!empty($edit_url))
+        <a
+            href="{{ $edit_url }}"
+            class="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700/50 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100 shadow-sm transition-all duration-200"
+            title="{{ statictranslations('Edit') }}"
+        >
+            <x-lucide-edit class="w-3.5 h-3.5" />
+        </a>
+    @endif
+
+    @if(!empty($delete_url))
+        <button
+            type="button"
+            data-dt-delete
+            data-delete-url="{{ $delete_url }}"
+            data-record-id="{{ $id }}"
+            data-resource="{{ $resource ?? 'Record' }}"
+            data-label="{{ $label ?? $id }}"
+            class="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700/50 bg-zinc-100 dark:bg-zinc-800 text-rose-500 hover:bg-rose-500 hover:text-white hover:border-rose-500 shadow-sm transition-all duration-200"
+            title="{{ statictranslations('Delete') }}"
+        >
+            <x-lucide-trash-2 class="w-3.5 h-3.5" />
+        </button>
+    @endif
+</div>

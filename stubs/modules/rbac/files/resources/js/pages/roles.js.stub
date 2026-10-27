@@ -1,0 +1,39 @@
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Roles table
+    const tableElement = document.getElementById('roles-table');
+    if (tableElement && window.$) {
+        const ajaxUrl = tableElement.dataset.ajaxUrl;
+        const table = window.$('#roles-table').DataTable({
+            ajax: {
+                url: ajaxUrl,
+            },
+            columns: [
+                { data: 'DT_RowIndex', orderable: false, searchable: false, class: 'text-center' },
+                { data: 'name' },
+                { data: 'permissions', orderable: false },
+                { data: 'actions', orderable: false, class: 'text-right' }
+            ]
+        });
+    }
+
+    // 2. Select all within permission group
+    document.querySelectorAll('.select-group-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetClass = btn.dataset.groupSelector;
+            const container = document.querySelector('.' + targetClass);
+            if (!container) return;
+
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+
+            const trans = window.trans || ((k) => k);
+            const selectAllText = btn.dataset.selectAllText || trans('Select All');
+            const deselectAllText = btn.dataset.deselectAllText || trans('Deselect All');
+            btn.textContent = allChecked ? selectAllText : deselectAllText;
+        });
+    });
+});

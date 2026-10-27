@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Repositories\Admin\Repositories;
+
+use App\Repositories\Admin\Interface\RoleRepositoryInterface;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Role;
+
+class RoleRepository implements RoleRepositoryInterface
+{
+    public function create(array $data): Role
+    {
+        $permissions = $data['permissions'] ?? [];
+        unset($data['permissions']);
+
+        $role = Role::create($data);
+
+        if (! empty($permissions)) {
+            $permissions = array_map('intval', $permissions);
+            $role->syncPermissions($permissions);
+        }
+
+        return $role;
+    }
+
+    public function update(int $id, array $data): Role
+    {
+        $permissions = $data['permissions'] ?? [];
+        unset($data['permissions']);
+
+        $role = Role::findOrFail($id);
+        $role->update($data);
+
+        $permissions = array_map('intval', $permissions);
+        $role->syncPermissions($permissions);
+
+        return $role;
+    }
+
+    public function delete(int $id): bool
+    {
+        return (bool) Role::where('id', $id)->delete();
+    }
+
+    public function getByGuard(string $guardName): Collection
+    {
+        return Role::where('guard_name', $guardName)->get();
+    }
+
+    public function getRolesList(?string $term = null): Collection
+    {
+        $query = Role::query()->where('guard_name', config('admin.guard', 'admin'));
+
+        if ($term) {
+            $query->where('name', 'like', '%'.$term.'%');
+        }
+
+        return $query->get(['id', 'name']);
+    }
+
+    public function datatable(array $filters = []): Builder
+    {
+        $query = Role::query()->where('guard_name', config('admin.guard', 'admin'))->with('permissions');
+
+        $searchTerm = data_get($filters, 'search.value', data_get($filters, 'search', ''));
+
+        if (is_string($searchTerm)) {
+            $searchTerm = trim($searchTerm);
+        }
+
+        if ($searchTerm !== '' && $searchTerm !== null) {
+            $query->where('name', 'like', '%'.$searchTerm.'%');
+        }
+
+        return $query;
+    }
+
+    public function findByIds(array $ids): Collection
+    {
+        return Role::whereIn('id', $ids)->get();
+    }
+}

@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+/**
+ * Base class for admin Form Requests on ID-less routes.
+ * The record ID travels in the query string for GET/DELETE and in the body otherwise.
+ */
+abstract class AdminRequest extends FormRequest
+{
+    /** Table used to validate that the submitted id exists. */
+    abstract protected function targetTable(): string;
+
+    public function resolveId(): ?int
+    {
+        $id = in_array($this->method(), ['GET', 'DELETE'], true)
+            ? $this->query('id')
+            : $this->input('id');
+
+        return is_numeric($id) ? (int) $id : null;
+    }
+
+    protected function idRules(): array
+    {
+        return [
+            'id' => ['required', 'integer', Rule::exists($this->targetTable(), 'id')],
+        ];
+    }
+
+    /** Rules for a translatable field: default locale required, the others nullable. */
+    protected function translatableRules(string $field, int $max = 255): array
+    {
+        $rules = [];
+        $default = config('admin.locales.default', 'en');
+
+        foreach (config('admin.locales.supported', [$default]) as $locale) {
+            $rules["{$field}.{$locale}"] = $locale === $default
+                ? ['required', 'string', "max:{$max}"]
+                : ['nullable', 'string', "max:{$max}"];
+        }
+
+        return $rules;
+    }
+
+    protected function adminUser()
+    {
+        return auth(config('admin.guard', 'admin'))->user();
+    }
+}

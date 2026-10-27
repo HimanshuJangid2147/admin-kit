@@ -1,0 +1,780 @@
+@extends('layouts.app')
+
+@section('title', statictranslations('Site Settings'))
+
+@section('content')
+<div class="px-6 py-12 md:px-12 md:py-20 max-w-screen mx-auto space-y-12">
+
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between border-b border-border/50 pb-8 gap-6">
+        <div>
+            <h1 class="font-sans font-bold text-3xl md:text-4xl text-foreground tracking-tight">{{ statictranslations('System') }} <span class="text-primary">{{ statictranslations('Settings') }}</span></h1>
+            <p class="font-sans text-[11px] uppercase tracking-[0.2em] text-muted-foreground mt-3">{{ statictranslations('Configure global branding, contact details, social channels, brochures, and maintenance mode') }}</p>
+        </div>
+
+        <div class="flex items-center gap-6">
+            {{-- Maintenance Mode Quick Header Switch --}}
+            <div class="flex items-center gap-3 px-4 py-2 bg-card/40 border border-border/30 rounded-xl">
+                <div class="flex flex-col text-right">
+                    <span class="font-sans text-[9px] uppercase tracking-[0.15em] font-bold text-foreground">{{ statictranslations('Maintenance Mode') }}</span>
+                    <span class="font-sans text-[10px] text-muted-foreground" id="header-maintenance-status">
+                        @if ($settings?->maintenance_mode)
+                            <span class="text-destructive font-bold">{{ statictranslations('ON') }}</span>
+                        @else
+                            <span class="text-emerald-500 font-bold">{{ statictranslations('OFF') }}</span>
+                        @endif
+                    </span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer select-none">
+                    <input type="checkbox" id="header-maintenance-toggle-btn" class="sr-only peer" {{ $settings?->maintenance_mode ? 'checked' : '' }}
+                        data-url="{{ route('admin.settings.maintenance.toggle') }}"
+                        data-enabled-text="{{ statictranslations('Maintenance Mode Enabled') }}"
+                        data-enabled-sub="{{ statictranslations('Public site shows maintenance screen.') }}"
+                        data-disabled-text="{{ statictranslations('Website Online') }}"
+                        data-disabled-sub="{{ statictranslations('Public site is accessible to everyone.') }}">
+                    <div class="w-11 h-6 bg-muted border border-border/80 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-muted-foreground/50 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary/20 peer-checked:border-primary peer-checked:after:bg-primary transition-all duration-300"></div>
+                </label>
+            </div>
+
+            <button type="button" onclick="window.location.reload()" class="px-6 py-2.5 bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground font-sans text-[10px] uppercase tracking-[0.15em] transition-all duration-300 rounded-sm shadow-xs cursor-pointer">
+                {{ statictranslations('Discard Changes') }}
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24" data-tabs-container data-tab-group>
+
+        <!-- Left Sidebar: Settings Navigation -->
+        <div class="lg:col-span-4 space-y-8">
+            <div class="p-8 border border-border/30 bg-card/20 backdrop-blur-sm rounded-2xl relative overflow-hidden">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-full border border-primary/30 bg-primary/10 flex items-center justify-center text-primary">
+                        <i class="fa-solid fa-sliders w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Site Control') }}</h2>
+                        <p class="font-sans text-[10px] uppercase tracking-wider text-muted-foreground">{{ statictranslations('Global Settings Panel') }}</p>
+                    </div>
+                </div>
+                <p class="font-sans text-xs text-muted-foreground/80 font-light leading-relaxed">
+                    {{ statictranslations('Manage website metadata, contact details, document downloads, and public access status.') }}
+                </p>
+            </div>
+
+            <!-- Settings Nav -->
+            <nav class="flex flex-col space-y-1">
+                <button type="button"
+                    class="settings-tab-btn w-full flex items-center gap-3 px-5 py-4 transition-colors duration-300 group bg-card/30 border-l-2 border-primary text-foreground cursor-pointer"
+                    data-tab-target="#section-site-content">
+                    <i class="fa-solid fa-globe w-4 h-4 text-primary group-hover:text-primary transition-colors"></i>
+                    <span class="font-sans text-[11px] uppercase tracking-[0.15em]">{{ statictranslations('Site Content') }}</span>
+                </button>
+
+                <button type="button"
+                    class="settings-tab-btn w-full flex items-center gap-3 px-5 py-4 transition-colors duration-300 group border-l-2 border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground cursor-pointer"
+                    data-tab-target="#section-social-media">
+                    <i class="fa-solid fa-share w-4 h-4 group-hover:text-primary transition-colors"></i>
+                    <span class="font-sans text-[11px] uppercase tracking-[0.15em]">{{ statictranslations('Social Media') }}</span>
+                </button>
+
+                @if(view()->exists('components.admin.pdfuploader'))
+                <button type="button"
+                    class="settings-tab-btn w-full flex items-center gap-3 px-5 py-4 transition-colors duration-300 group border-l-2 border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground cursor-pointer"
+                    data-tab-target="#section-footer-pdfs">
+                    <i class="fa-solid fa-file-lines w-4 h-4 group-hover:text-primary transition-colors"></i>
+                    <span class="font-sans text-[11px] uppercase tracking-[0.15em]">{{ statictranslations('Brochures') }}</span>
+                </button>
+                @endif
+
+                @if(Route::has('admin.page_banners.upload'))
+                <button type="button"
+                    class="settings-tab-btn w-full flex items-center gap-3 px-5 py-4 transition-colors duration-300 group border-l-2 border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground cursor-pointer"
+                    data-tab-target="#section-sitemap-banner">
+                    <i class="fa-solid fa-image w-4 h-4 group-hover:text-primary transition-colors"></i>
+                    <span class="font-sans text-[11px] uppercase tracking-[0.15em]">{{ statictranslations('Sitemap Banner') }}</span>
+                </button>
+                @endif
+
+                <button type="button"
+                    class="settings-tab-btn w-full flex items-center gap-3 px-5 py-4 transition-colors duration-300 group border-l-2 border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground cursor-pointer"
+                    data-tab-target="#section-site-seo">
+                    <i class="fa-solid fa-magnifying-glass w-4 h-4 group-hover:text-primary transition-colors"></i>
+                    <span class="font-sans text-[11px] uppercase tracking-[0.15em]">{{ statictranslations('Site SEO') }}</span>
+                </button>
+
+                <button type="button"
+                    class="settings-tab-btn w-full flex items-center gap-3 px-5 py-4 transition-colors duration-300 group border-l-2 border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground cursor-pointer"
+                    data-tab-target="#section-notification-sound">
+                    <i class="fa-solid fa-bell w-4 h-4 group-hover:text-primary transition-colors"></i>
+                    <span class="font-sans text-[11px] uppercase tracking-[0.15em]">{{ statictranslations('Notification Sound') }}</span>
+                </button>
+
+                <button type="button"
+                    class="settings-tab-btn w-full flex items-center gap-3 px-5 py-4 transition-colors duration-300 group border-l-2 border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground cursor-pointer"
+                    data-tab-target="#section-maintenance">
+                    <i class="fa-solid fa-shield w-4 h-4 group-hover:text-primary transition-colors"></i>
+                    <span class="font-sans text-[11px] uppercase tracking-[0.15em]">{{ statictranslations('Maintenance Mode') }}</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Right Side: Settings Form Sections -->
+        <div class="lg:col-span-8 space-y-12 relative">
+
+            <!-- SECTION 1: Site Content -->
+            <section id="section-site-content" class="tab-content-panel transition-opacity duration-300">
+                <div class="mb-8 border-b border-border/30 pb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Contact Information & Tagline') }}</h3>
+                        <p class="font-sans text-xs text-muted-foreground mt-2 font-light">{{ statictranslations('Update overall site contact details and luxury quote tagline.') }}</p>
+                    </div>
+
+                    <!-- Language Switcher & Auto-Translate (Trilingual: EN, RU, KK) -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/30">
+                            <button type="button" class="tab-btn bg-background text-foreground font-bold text-[10px] px-3 py-1 rounded-lg shadow-sm" data-tab="en" aria-selected="true">EN</button>
+                            <button type="button" class="tab-btn text-muted-foreground font-bold text-[10px] px-3 py-1 rounded-lg" data-tab="ru" aria-selected="false">RU</button>
+                            <button type="button" class="tab-btn text-muted-foreground font-bold text-[10px] px-3 py-1 rounded-lg" data-tab="kk" aria-selected="false">KK</button>
+                        </div>
+
+                        <button type="button" id="btn-auto-translate"
+                            data-translate-url="{{ Route::has('admin.translations.auto-fill') ? route('admin.translations.auto-fill') : (Route::has('translations.auto-fill') ? route('translations.auto-fill') : '#') }}"
+                            class="inline-flex items-center justify-center gap-2 h-8 px-4 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/25 transition-all duration-300 text-xs font-sans uppercase tracking-wider font-bold cursor-pointer">
+                            <i class="fa-solid fa-language h-3.5 w-3.5 animate-pulse"></i>
+                            <span id="btn-translate-text">{{ statictranslations('Translate') }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <form action="{{ route('admin.settings.site-content.update') }}" method="POST" class="settings-ajax-form space-y-8">
+                    @csrf
+
+                    <div class="space-y-6">
+                        {{-- Site Quote --}}
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {{ statictranslations('Site Quote / Tagline') }} <span class="text-destructive">*</span>
+                            </label>
+
+                            <div class="tab-content" id="tab-content-en">
+                                <textarea name="site_quote[en]" rows="3" required
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Enter English site quote...') }}">{{ old('site_quote.en', $settings?->getTranslation('site_quote', 'en', false)) }}</textarea>
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-ru">
+                                <textarea name="site_quote[ru]" rows="3"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Enter Russian site quote...') }}">{{ old('site_quote.ru', $settings?->getTranslation('site_quote', 'ru', false)) }}</textarea>
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-kk">
+                                <textarea name="site_quote[kk]" rows="3"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Enter Kazakh site quote...') }}">{{ old('site_quote.kk', $settings?->getTranslation('site_quote', 'kk', false)) }}</textarea>
+                            </div>
+                            @error('site_quote.en') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Contact Info Row --}}
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div class="space-y-3" id="phone-code-combobox-container">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('STD Code') }} <span class="text-destructive">*</span></label>
+                                <input type="hidden" name="std_code" id="std_code" value="{{ old('std_code', $settings?->std_code ?? '+7') }}">
+
+                                <div class="relative">
+                                    <button type="button"
+                                        class="combobox-trigger h-11 w-full rounded-xl border border-border/70 bg-card px-4 text-xs flex items-center justify-between hover:border-primary focus:outline-none transition-all duration-300 shadow-sm cursor-pointer">
+                                        <span class="combobox-label truncate font-medium text-foreground">
+                                            {{ old('std_code', $settings?->std_code ?? '+7') }}
+                                        </span>
+                                        <i class="fa-solid fa-chevron-down h-4 w-4 text-muted-foreground shrink-0"></i>
+                                    </button>
+
+                                    <div class="combobox-dropdown hidden absolute z-50 mt-1 w-full rounded-2xl border border-border bg-card shadow-2xl p-2 space-y-2 max-h-64 overflow-hidden flex flex-col">
+                                        <div class="relative px-1 pt-1">
+                                            <input type="text" class="combobox-search-input h-9 w-full rounded-xl border border-border/70 bg-muted/20 px-3 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary transition-all"
+                                                placeholder="{{ statictranslations('Search country or code...') }}">
+                                        </div>
+                                        <div class="combobox-options overflow-y-auto space-y-1 pr-1 custom-scrollbar flex-1">
+                                        </div>
+                                    </div>
+                                </div>
+                                @error('std_code') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('Phone Number') }} <span class="text-destructive">*</span></label>
+                                <input type="text" name="phone" required value="{{ old('phone', $settings?->phone ?? '727 244 8888') }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="727 244 8888">
+                                @error('phone') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('Contact Email') }} <span class="text-destructive">*</span></label>
+                                <input type="email" name="email" required value="{{ old('email', $settings?->email ?? 'concierge@satgurutravel.kz') }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="concierge@satgurutravel.kz">
+                                @error('email') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+
+                        {{-- Physical Address --}}
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('Office Address') }} <span class="text-destructive">*</span></label>
+                            <input type="text" name="address" required value="{{ old('address', $settings?->address ?? 'Dostyk Avenue 180, Business Centre Koktem, Almaty, Kazakhstan') }}"
+                                class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                placeholder="Dostyk Avenue 180, Business Centre Koktem, Almaty, Kazakhstan">
+                            @error('address') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div class="pt-6 flex justify-end">
+                        <button type="submit" class="px-6 py-2.5 bg-primary text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] font-semibold hover:bg-brand-green-hover transition-colors duration-200 rounded-xl shadow-md cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-save h-4 w-4"></i>
+                            {{ statictranslations('Save Site Content') }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- SECTION 2: Social Media -->
+            <section id="section-social-media" class="tab-content-panel transition-opacity duration-300 hidden">
+                <div class="mb-8 border-b border-border/30 pb-4">
+                    <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Social Media Channels') }}</h3>
+                    <p class="font-sans text-xs text-muted-foreground mt-2 font-light">{{ statictranslations('Configure official social network links displayed in website footer.') }}</p>
+                </div>
+
+                <form action="{{ route('admin.settings.social-media.update') }}" method="POST" class="settings-ajax-form space-y-8">
+                    @csrf
+
+                    <div class="space-y-6">
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                                <i class="fa-solid fa-facebook h-4 w-4 text-primary"></i>
+                                {{ statictranslations('Facebook URL') }}
+                            </label>
+                            <input type="url" name="facebook_link" value="{{ old('facebook_link', $settings?->facebook_link) }}"
+                                class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                placeholder="https://facebook.com/satgurutravelkz">
+                            @error('facebook_link') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                                <i class="fa-solid fa-instagram h-4 w-4 text-primary"></i>
+                                {{ statictranslations('Instagram URL') }}
+                            </label>
+                            <input type="url" name="instagram_link" value="{{ old('instagram_link', $settings?->instagram_link) }}"
+                                class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                placeholder="https://instagram.com/satgurutravel_kz">
+                            @error('instagram_link') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+                                <i class="fa-solid fa-linkedin h-4 w-4 text-primary"></i>
+                                {{ statictranslations('LinkedIn URL') }}
+                            </label>
+                            <input type="url" name="linkedin_link" value="{{ old('linkedin_link', $settings?->linkedin_link) }}"
+                                class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                placeholder="https://linkedin.com/company/satgurutravel-kz">
+                            @error('linkedin_link') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div class="pt-6 flex justify-end">
+                        <button type="submit" class="px-6 py-2.5 bg-primary text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] font-semibold hover:bg-brand-green-hover transition-colors duration-200 rounded-xl shadow-md cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-save h-4 w-4"></i>
+                            {{ statictranslations('Save Social Links') }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- SECTION 3: Footer PDFs -->
+            @if(view()->exists('components.admin.pdfuploader'))
+            <section id="section-footer-pdfs" class="tab-content-panel transition-opacity duration-300 hidden">
+                <div class="mb-8 border-b border-border/30 pb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Downloadable Footer Documents') }}</h3>
+                        <p class="font-sans text-xs text-muted-foreground mt-2 font-light">{{ statictranslations('Upload PDF brochures or corporate documents displayed in site footer.') }}</p>
+                    </div>
+
+                    <!-- Language Switcher & Auto-Translate (Trilingual: EN, RU, KK) -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/30">
+                            <button type="button" class="tab-btn bg-background text-foreground font-bold text-[10px] px-3 py-1 rounded-lg shadow-sm" data-tab="en" aria-selected="true">EN</button>
+                            <button type="button" class="tab-btn text-muted-foreground font-bold text-[10px] px-3 py-1 rounded-lg" data-tab="ru" aria-selected="false">RU</button>
+                            <button type="button" class="tab-btn text-muted-foreground font-bold text-[10px] px-3 py-1 rounded-lg" data-tab="kk" aria-selected="false">KK</button>
+                        </div>
+
+                        <button type="button" id="btn-auto-translate"
+                            data-translate-url="{{ Route::has('admin.translations.auto-fill') ? route('admin.translations.auto-fill') : (Route::has('translations.auto-fill') ? route('translations.auto-fill') : '#') }}"
+                            class="inline-flex items-center justify-center gap-2 h-8 px-4 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/25 transition-all duration-300 text-xs font-sans uppercase tracking-wider font-bold cursor-pointer">
+                            <i class="fa-solid fa-language h-3.5 w-3.5 animate-pulse"></i>
+                            <span id="btn-translate-text">{{ statictranslations('Translate') }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <form action="{{ route('admin.settings.footer-pdfs.update') }}" method="POST" enctype="multipart/form-data" class="settings-ajax-form space-y-8">
+                    @csrf
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {{-- PDF 1 --}}
+                        <div class="p-6 rounded-xl bg-card/20 border border-border/30 space-y-6">
+                            <div class="space-y-3">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('PDF Document 1 Title') }}</label>
+                                <div class="tab-content" id="tab-content-pdf1-en">
+                                    <input type="text" name="pdf_one_name[en]" value="{{ old('pdf_one_name.en', $settings?->getTranslation('pdf_one_name', 'en', false)) }}"
+                                        class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                        placeholder="{{ statictranslations('e.g., Silk Road Expeditions Catalogue 2026') }}">
+                                </div>
+                                <div class="tab-content hidden" id="tab-content-pdf1-ru">
+                                    <input type="text" name="pdf_one_name[ru]" value="{{ old('pdf_one_name.ru', $settings?->getTranslation('pdf_one_name', 'ru', false)) }}"
+                                        class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                        placeholder="{{ statictranslations('e.g., Каталог Экспедиций Шелкового Пути 2026') }}">
+                                </div>
+                                <div class="tab-content hidden" id="tab-content-pdf1-kk">
+                                    <input type="text" name="pdf_one_name[kk]" value="{{ old('pdf_one_name.kk', $settings?->getTranslation('pdf_one_name', 'kk', false)) }}"
+                                        class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                        placeholder="{{ statictranslations('e.g., Жібек жолы экспедициялары каталогы 2026') }}">
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('PDF Document 1 File') }}</label>
+                                <x-admin.pdfuploader name="pdf_one" :multiple="false" accept="application/pdf" label="Upload Primary PDF Document" />
+                                @if ($settings?->pdf_one)
+                                    <div class="mt-2 flex items-center gap-2 p-3 rounded-xl border border-border bg-card">
+                                        <i class="fa-solid fa-file-lines h-5 w-5 text-red-500 shrink-0"></i>
+                                        <span class="text-xs font-medium text-foreground truncate flex-1">{{ basename($settings->pdf_one) }}</span>
+                                        <a href="{{ asset('storage/' . $settings->pdf_one) }}" target="_blank" class="text-xs text-brand-orange hover:text-brand-orange-hover hover:underline font-bold uppercase tracking-wider shrink-0">
+                                            {{ statictranslations('View PDF') }}
+                                        </a>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('PDF Document 1 Cover Image') }}</label>
+                                <x-admin.uploader name="pdf_one_image" :multiple="false" accept="image/*" label="Upload PDF 1 Cover Preview Image" />
+                                @if ($settings?->pdf_one_image)
+                                    <div class="mt-2 flex items-center gap-3 p-3 rounded-xl border border-border bg-card">
+                                        <img src="{{ asset('storage/' . $settings->pdf_one_image) }}" alt="PDF 1 Cover" class="w-12 h-16 object-cover rounded-lg border border-border/50 shrink-0">
+                                        <span class="text-xs font-medium text-foreground truncate flex-1">{{ basename($settings->pdf_one_image) }}</span>
+                                        <a href="{{ asset('storage/' . $settings->pdf_one_image) }}" target="_blank" class="text-xs text-brand-orange hover:text-brand-orange-hover hover:underline font-bold uppercase tracking-wider shrink-0">
+                                            {{ statictranslations('View Cover') }}
+                                        </a>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        {{-- PDF 2 --}}
+                        <div class="p-6 rounded-xl bg-card/20 border border-border/30 space-y-6">
+                            <div class="space-y-3">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('PDF Document 2 Title') }}</label>
+                                <div class="tab-content" id="tab-content-pdf2-en">
+                                    <input type="text" name="pdf_two_name[en]" value="{{ old('pdf_two_name.en', $settings?->getTranslation('pdf_two_name', 'en', false)) }}"
+                                        class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                        placeholder="{{ statictranslations('e.g., Luxury Concierge Guidelines') }}">
+                                </div>
+                                <div class="tab-content hidden" id="tab-content-pdf2-ru">
+                                    <input type="text" name="pdf_two_name[ru]" value="{{ old('pdf_two_name.ru', $settings?->getTranslation('pdf_two_name', 'ru', false)) }}"
+                                        class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                        placeholder="{{ statictranslations('e.g., Правила Премиум Консьерж-Сервиса') }}">
+                                </div>
+                                <div class="tab-content hidden" id="tab-content-pdf2-kk">
+                                    <input type="text" name="pdf_two_name[kk]" value="{{ old('pdf_two_name.kk', $settings?->getTranslation('pdf_two_name', 'kk', false)) }}"
+                                        class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                        placeholder="{{ statictranslations('e.g., Люкс консьерж нұсқаулығы') }}">
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('PDF Document 2 File') }}</label>
+                                <x-admin.pdfuploader name="pdf_two" :multiple="false" accept="application/pdf" label="Upload Secondary PDF Document" />
+                                @if ($settings?->pdf_two)
+                                    <div class="mt-2 flex items-center gap-2 p-3 rounded-xl border border-border bg-card">
+                                        <i class="fa-solid fa-file-lines h-5 w-5 text-red-500 shrink-0"></i>
+                                        <span class="text-xs font-medium text-foreground truncate flex-1">{{ basename($settings->pdf_two) }}</span>
+                                        <a href="{{ asset('storage/' . $settings->pdf_two) }}" target="_blank" class="text-xs text-brand-orange hover:text-brand-orange-hover hover:underline font-bold uppercase tracking-wider shrink-0">
+                                            {{ statictranslations('View PDF') }}
+                                        </a>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{{ statictranslations('PDF Document 2 Cover Image') }}</label>
+                                <x-admin.uploader name="pdf_two_image" :multiple="false" accept="image/*" label="Upload PDF 2 Cover Preview Image" />
+                                @if ($settings?->pdf_two_image)
+                                    <div class="mt-2 flex items-center gap-3 p-3 rounded-xl border border-border bg-card">
+                                        <img src="{{ asset('storage/' . $settings->pdf_two_image) }}" alt="PDF 2 Cover" class="w-12 h-16 object-cover rounded-lg border border-border/50 shrink-0">
+                                        <span class="text-xs font-medium text-foreground truncate flex-1">{{ basename($settings->pdf_two_image) }}</span>
+                                        <a href="{{ asset('storage/' . $settings->pdf_two_image) }}" target="_blank" class="text-xs text-brand-orange hover:text-brand-orange-hover hover:underline font-bold uppercase tracking-wider shrink-0">
+                                            {{ statictranslations('View Cover') }}
+                                        </a>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 flex justify-end">
+                        <button type="submit" class="px-6 py-2.5 bg-primary text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] font-semibold hover:bg-brand-green-hover transition-colors duration-200 rounded-xl shadow-md cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-save h-4 w-4"></i>
+                            {{ statictranslations('Save PDF Documents') }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+            @endif
+
+            <!-- SECTION: Sitemap Banner -->
+            @if(Route::has('admin.page_banners.upload'))
+            <section id="section-sitemap-banner" class="tab-content-panel transition-opacity duration-300 hidden">
+                <div class="mb-8 border-b border-border/30 pb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Sitemap Hero Banner') }}</h3>
+                        <p class="font-sans text-xs text-muted-foreground mt-2 font-light">{{ statictranslations('Upload and configure the hero banner image, title, eyebrow text, and description for the sitemap page.') }}</p>
+                    </div>
+
+                    <!-- Language Switcher & Auto-Translate (Trilingual: EN, RU, KK) -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/30">
+                            <button type="button" class="tab-btn bg-background text-foreground font-bold text-[10px] px-3 py-1 rounded-lg shadow-sm" data-tab="en" aria-selected="true">EN</button>
+                            <button type="button" class="tab-btn text-muted-foreground font-bold text-[10px] px-3 py-1 rounded-lg" data-tab="ru" aria-selected="false">RU</button>
+                            <button type="button" class="tab-btn text-muted-foreground font-bold text-[10px] px-3 py-1 rounded-lg" data-tab="kk" aria-selected="false">KK</button>
+                        </div>
+
+                        <button type="button" id="btn-auto-translate"
+                            data-translate-url="{{ Route::has('admin.translations.auto-fill') ? route('admin.translations.auto-fill') : (Route::has('translations.auto-fill') ? route('translations.auto-fill') : '#') }}"
+                            class="inline-flex items-center justify-center gap-2 h-8 px-4 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/25 transition-all duration-300 text-xs font-sans uppercase tracking-wider font-bold cursor-pointer">
+                            <i class="fa-solid fa-language h-3.5 w-3.5 animate-pulse"></i>
+                            <span id="btn-translate-text">{{ statictranslations('Translate') }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <form action="{{ route('admin.page_banners.upload') }}" method="POST" enctype="multipart/form-data" class="settings-ajax-form space-y-8">
+                    @csrf
+                    <input type="hidden" name="for_page" value="sitemap">
+
+                    <div class="space-y-6">
+                        {{-- Eyebrow Text --}}
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {{ statictranslations('Eyebrow Text') }}
+                            </label>
+                            <div class="tab-content" id="tab-content-sitemap-eyebrow-en">
+                                <input type="text" name="eyebrow_text[en]" value="{{ old('eyebrow_text.en', $sitemapBanner?->getTranslation('eyebrow_text', 'en', false) ?? 'Navigation Guide') }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('e.g. Navigation Guide') }}">
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-sitemap-eyebrow-ru">
+                                <input type="text" name="eyebrow_text[ru]" value="{{ old('eyebrow_text.ru', $sitemapBanner?->getTranslation('eyebrow_text', 'ru', false)) }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('e.g. Путеводитель по навигации') }}">
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-sitemap-eyebrow-kk">
+                                <input type="text" name="eyebrow_text[kk]" value="{{ old('eyebrow_text.kk', $sitemapBanner?->getTranslation('eyebrow_text', 'kk', false)) }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('e.g. Навигация нұсқаулығы') }}">
+                            </div>
+                        </div>
+
+                        {{-- Banner Title --}}
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {{ statictranslations('Banner Title') }} <span class="text-destructive">*</span>
+                            </label>
+                            <div class="tab-content" id="tab-content-sitemap-title-en">
+                                <input type="text" name="title[en]" required value="{{ old('title.en', $sitemapBanner?->getTranslation('title', 'en', false) ?? 'Explore Our Realm') }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('e.g. Explore Our Realm') }}">
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-sitemap-title-ru">
+                                <input type="text" name="title[ru]" value="{{ old('title.ru', $sitemapBanner?->getTranslation('title', 'ru', false)) }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('e.g. Откройте наш мир') }}">
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-sitemap-title-kk">
+                                <input type="text" name="title[kk]" value="{{ old('title.kk', $sitemapBanner?->getTranslation('title', 'kk', false)) }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('e.g. Біздің әлемді ашыңыз') }}">
+                            </div>
+                            @error('title.en') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Banner Description --}}
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                    {{ statictranslations('Banner Description') }}
+                                </label>
+                                <div class="flex items-center">
+                                    <span id="sitemap_description_en_counter" class="tab-content text-[10px] text-muted-foreground">0/150</span>
+                                    <span id="sitemap_description_ru_counter" class="tab-content hidden text-[10px] text-muted-foreground">0/150</span>
+                                    <span id="sitemap_description_kk_counter" class="tab-content hidden text-[10px] text-muted-foreground">0/150</span>
+                                </div>
+                            </div>
+                            <div class="tab-content" id="tab-content-sitemap-desc-en">
+                                <textarea name="description[en]" id="sitemap_description_en" rows="3" maxlength="150"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Provide brief overview for sitemap header...') }}">{{ old('description.en', $sitemapBanner?->getTranslation('description', 'en', false) ?? 'Complete architectural overview of all curated journeys, global destinations, and essential information.') }}</textarea>
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-sitemap-desc-ru">
+                                <textarea name="description[ru]" id="sitemap_description_ru" rows="3" maxlength="150"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Краткий обзор для карты сайта...') }}">{{ old('description.ru', $sitemapBanner?->getTranslation('description', 'ru', false)) }}</textarea>
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-sitemap-desc-kk">
+                                <textarea name="description[kk]" id="sitemap_description_kk" rows="3" maxlength="150"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Сайт картасының қысқаша шолуы...') }}">{{ old('description.kk', $sitemapBanner?->getTranslation('description', 'kk', false)) }}</textarea>
+                            </div>
+                        </div>
+
+                        {{-- Banner Image Uploader --}}
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {{ statictranslations('Banner Image') }}
+                            </label>
+                            @if ($sitemapBanner?->image)
+                                <div class="relative w-full h-48 rounded-2xl overflow-hidden border border-border bg-muted shadow-inner mb-3">
+                                    <img src="{{ asset('storage/' . $sitemapBanner->image) }}" alt="Sitemap Banner Preview" class="w-full h-full object-cover">
+                                    <div class="absolute bottom-2 left-3 bg-background/80 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-sans uppercase font-bold text-foreground tracking-wider border border-border/50">
+                                        {{ statictranslations('Current Banner Image') }}
+                                    </div>
+                                </div>
+                            @endif
+                            <x-admin.uploader name="image" :multiple="false" accept="image/*" />
+
+                            <div class="mt-3 p-3.5 rounded-xl border border-brand-orange/20 bg-brand-orange/5 backdrop-blur-sm flex items-start gap-3">
+                                <i class="fa-solid fa-circle-info h-4 w-4 text-brand-orange shrink-0 mt-0.5"></i>
+                                <div class="flex-1 space-y-1">
+                                    <span class="text-[10px] font-bold text-brand-orange uppercase tracking-wider block">
+                                        {{ statictranslations('Recommended Specs') }}
+                                    </span>
+                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-sans text-muted-foreground">
+                                        <span>{{ statictranslations('Size:') }} <strong class="text-foreground font-mono font-medium">2560×1440px</strong></span>
+                                        <span class="text-border/60">•</span>
+                                        <span>{{ statictranslations('Ratio:') }} <strong class="text-foreground font-mono font-medium">16:9</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 flex justify-end">
+                        <button type="submit" class="px-6 py-2.5 bg-primary text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] font-semibold hover:bg-brand-green-hover transition-colors duration-200 rounded-xl shadow-md cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-save h-4 w-4"></i>
+                            {{ statictranslations('Save Sitemap Banner') }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+            @endif
+
+            <!-- SECTION 4: Site SEO -->
+            <section id="section-site-seo" class="tab-content-panel transition-opacity duration-300 hidden">
+                <div class="mb-8 border-b border-border/30 pb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Search Engine Optimization (SEO)') }}</h3>
+                        <p class="font-sans text-xs text-muted-foreground mt-2 font-light">{{ statictranslations('Default meta title and description tags for search engine results.') }}</p>
+                    </div>
+
+                    <!-- Language Switcher & Auto-Translate (Trilingual: EN, RU, KK) -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/30">
+                            <button type="button" class="tab-btn bg-background text-foreground font-bold text-[10px] px-3 py-1 rounded-lg shadow-sm" data-tab="en" aria-selected="true">EN</button>
+                            <button type="button" class="tab-btn text-muted-foreground font-bold text-[10px] px-3 py-1 rounded-lg" data-tab="ru" aria-selected="false">RU</button>
+                            <button type="button" class="tab-btn text-muted-foreground font-bold text-[10px] px-3 py-1 rounded-lg" data-tab="kk" aria-selected="false">KK</button>
+                        </div>
+
+                        <button type="button" id="btn-auto-translate"
+                            data-translate-url="{{ Route::has('admin.translations.auto-fill') ? route('admin.translations.auto-fill') : (Route::has('translations.auto-fill') ? route('translations.auto-fill') : '#') }}"
+                            class="inline-flex items-center justify-center gap-2 h-8 px-4 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/25 transition-all duration-300 text-xs font-sans uppercase tracking-wider font-bold cursor-pointer">
+                            <i class="fa-solid fa-language h-3.5 w-3.5 animate-pulse"></i>
+                            <span id="btn-translate-text">{{ statictranslations('Translate') }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <form action="{{ route('admin.settings.site-seo.update') }}" method="POST" class="settings-ajax-form space-y-8">
+                    @csrf
+
+                    <div class="space-y-6">
+                        {{-- Meta Title --}}
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {{ statictranslations('Default Meta Title') }} <span class="text-destructive">*</span>
+                            </label>
+                            <div class="tab-content" id="tab-content-seo-title-en">
+                                <input type="text" name="meta_title[en]" required value="{{ old('meta_title.en', $settings?->getTranslation('meta_title', 'en', false) ?? 'Satguru Travel Kazakhstan | Curated Journeys & Bespoke Luxury Travel') }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Satguru Travel Kazakhstan | Curated Journeys & Bespoke Luxury Travel') }}">
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-seo-title-ru">
+                                <input type="text" name="meta_title[ru]" value="{{ old('meta_title.ru', $settings?->getTranslation('meta_title', 'ru', false)) }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Satguru Travel Казахстан | Премиальные Путешествия и Туры') }}">
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-seo-title-kk">
+                                <input type="text" name="meta_title[kk]" value="{{ old('meta_title.kk', $settings?->getTranslation('meta_title', 'kk', false)) }}"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Satguru Travel Қазақстан | Таңдаулы саяхаттар мен жеке турлар') }}">
+                            </div>
+                            @error('meta_title.en') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Meta Description --}}
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {{ statictranslations('Default Meta Description') }} <span class="text-destructive">*</span>
+                            </label>
+                            <div class="tab-content" id="tab-content-seo-desc-en">
+                                <textarea name="meta_description[en]" rows="4" required
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Discover curated journeys along the Silk Road with Satguru Travel Kazakhstan...') }}">{{ old('meta_description.en', $settings?->getTranslation('meta_description', 'en', false) ?? 'Experience luxury Silk Road expeditions, Almaty alpine retreats, and bespoke Central Asian itineraries with Satguru Tours & Travels Kazakhstan.') }}</textarea>
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-seo-desc-ru">
+                                <textarea name="meta_description[ru]" rows="4"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Откройте премиальные туры по Шелковому Пути с Satguru Travel Казахстан...') }}">{{ old('meta_description.ru', $settings?->getTranslation('meta_description', 'ru', false)) }}</textarea>
+                            </div>
+                            <div class="tab-content hidden" id="tab-content-seo-desc-kk">
+                                <textarea name="meta_description[kk]" rows="4"
+                                    class="w-full bg-transparent border-b border-border/50 py-3 text-foreground font-medium focus:outline-none focus:border-primary transition-colors duration-300 placeholder-muted-foreground/30"
+                                    placeholder="{{ statictranslations('Satguru Travel Қазақстанмен Жібек жолы бойындағы саяхаттарды ашыңыз...') }}">{{ old('meta_description.kk', $settings?->getTranslation('meta_description', 'kk', false)) }}</textarea>
+                            </div>
+                            @error('meta_description.en') <p class="text-xs text-destructive mt-1">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div class="pt-6 flex justify-end">
+                        <button type="submit" class="px-6 py-2.5 bg-primary text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] font-semibold hover:bg-brand-green-hover transition-colors duration-200 rounded-xl shadow-md cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-save h-4 w-4"></i>
+                            {{ statictranslations('Save SEO Settings') }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- SECTION: Notification Sound -->
+            <section id="section-notification-sound" class="tab-content-panel transition-opacity duration-300 hidden">
+                <div class="mb-8 border-b border-border/30 pb-4">
+                    <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Notification Sound & Alert Tone') }}</h3>
+                    <p class="font-sans text-xs text-muted-foreground mt-2 font-light">{{ statictranslations('Upload custom audio tone (.mp3, .wav, .ogg) for real-time notification alerts.') }}</p>
+                </div>
+
+                <form action="{{ route('admin.settings.notification-sound.update') }}" method="POST" enctype="multipart/form-data" class="settings-ajax-form space-y-8">
+                    @csrf
+
+                    <div class="p-8 rounded-xl bg-card/20 border border-border/30 space-y-6">
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {{ statictranslations('Current Notification Tone') }}
+                            </label>
+                            @if (!empty($settings?->notification_sound))
+                                <div class="flex items-center gap-4 p-4 rounded-xl bg-card/40 border border-border">
+                                    <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                                        <i class="fa-solid fa-music text-sm"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-xs font-semibold text-foreground truncate">{{ basename($settings->notification_sound) }}</p>
+                                        <audio controls class="mt-2 h-8 w-full max-w-sm">
+                                            <source src="{{ Storage::disk('public')->url($settings->notification_sound) }}" type="audio/mpeg">
+                                            {{ statictranslations('Your browser does not support the audio element.') }}
+                                        </audio>
+                                    </div>
+                                </div>
+                            @else
+                                <p class="text-xs text-muted-foreground italic">{{ statictranslations('Using system default synthesized luxury chime.') }}</p>
+                            @endif
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                                {{ statictranslations('Upload New Alert Sound (.mp3, .wav, .ogg)') }}
+                            </label>
+                            <input type="file" name="notification_sound" accept="audio/mp3,audio/wav,audio/ogg,audio/mpeg"
+                                class="w-full text-xs text-muted-foreground file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer">
+                            <p class="text-[11px] text-muted-foreground/70">{{ statictranslations('Max file size: 5MB. Clear or re-upload anytime.') }}</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 flex justify-end">
+                        <button type="submit" class="px-6 py-2.5 bg-primary text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] font-semibold hover:bg-brand-green-hover transition-colors duration-200 rounded-xl shadow-md cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-save h-4 w-4"></i>
+                            {{ statictranslations('Save Notification Sound') }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- SECTION 5: Maintenance Mode -->
+            <section id="section-maintenance" class="tab-content-panel transition-opacity duration-300 hidden">
+                <div class="mb-8 border-b border-border/30 pb-4">
+                    <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Maintenance & System Access') }}</h3>
+                    <p class="font-sans text-xs text-muted-foreground mt-2 font-light">{{ statictranslations('Enable or disable maintenance mode for public website visitors.') }}</p>
+                </div>
+
+                <div class="p-8 rounded-xl bg-card/20 border border-border/30 space-y-6">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h4 class="font-sans font-semibold text-base text-foreground">{{ statictranslations('Website Status') }}</h4>
+                            <p class="font-sans text-xs text-muted-foreground mt-1" id="maintenance-status-text">
+                                @if ($settings?->maintenance_mode)
+                                    <span class="text-destructive font-bold">{{ statictranslations('Maintenance Mode Enabled') }}</span> - {{ statictranslations('Public site shows maintenance screen.') }}
+                                @else
+                                    <span class="text-emerald-500 font-bold">{{ statictranslations('Website Online') }}</span> - {{ statictranslations('Public site is accessible to everyone.') }}
+                                @endif
+                            </p>
+                        </div>
+
+                        {{-- Toggle Switch --}}
+                        <label class="relative inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="maintenance-toggle-btn" class="sr-only peer" {{ $settings?->maintenance_mode ? 'checked' : '' }}
+                                data-url="{{ route('admin.settings.maintenance.toggle') }}"
+                                data-enabled-text="{{ statictranslations('Maintenance Mode Enabled') }}"
+                                data-enabled-sub="{{ statictranslations('Public site shows maintenance screen.') }}"
+                                data-disabled-text="{{ statictranslations('Website Online') }}"
+                                data-disabled-sub="{{ statictranslations('Public site is accessible to everyone.') }}">
+                            <div class="w-12 h-7 bg-muted border border-border/80 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-muted-foreground/50 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary/20 peer-checked:border-primary peer-checked:after:bg-primary transition-all duration-300"></div>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    {{-- Initial Create Site Settings Modal Popup --}}
+    @if ($showCreateModal ?? false)
+    <div id="init-settings-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
+        <div class="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-8 space-y-6 text-center animate-in fade-in zoom-in-95 duration-300">
+            <div class="w-16 h-16 rounded-full border border-primary/30 bg-primary/10 flex items-center justify-center text-primary mx-auto">
+                <i class="fa-solid fa-sliders-horizontal w-8 h-8"></i>
+            </div>
+
+            <div class="space-y-2">
+                <h3 class="font-sans font-bold text-xl text-foreground">{{ statictranslations('Site Settings Not Created') }}</h3>
+                <p class="font-sans text-xs text-muted-foreground font-light leading-relaxed">
+                    {{ statictranslations('No site settings record found in the database. Click below to initialize site settings.') }}
+                </p>
+            </div>
+
+            <button type="button" id="create-site-settings-btn" data-url="{{ route('admin.settings.initialize') }}"
+                class="w-full py-3 bg-primary text-primary-foreground font-sans text-xs uppercase tracking-[0.12em] hover:bg-brand-green-hover transition-colors duration-200 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2 font-bold">
+                <i class="fa-solid fa-plus-circle h-4 w-4"></i>
+                {{ statictranslations('Create Site Settings') }}
+            </button>
+        </div>
+    </div>
+    @endif
+
+</div>
+@endsection

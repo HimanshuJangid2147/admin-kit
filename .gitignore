@@ -1,0 +1,6 @@
+/vendor/
+.phpunit.result.cache
+.env
+.env.backup
+.DS_Store
+Thumbs.db

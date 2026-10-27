@@ -1,0 +1,90 @@
+/* ─────────────────────────────────────────────────────────────
+   ROLE PERMISSIONS MATRIX INTERACTIVITY (Module Row Tabular Grid)
+   ───────────────────────────────────────────────────────────── */
+const RolePermissions = (() => {
+
+    const syncRowToggles = () => {
+        const rowToggles = document.querySelectorAll('[data-row-toggle]');
+        rowToggles.forEach(toggle => {
+            const groupName = toggle.getAttribute('data-row-toggle');
+            const rowCheckboxes = document.querySelectorAll(`.permission-checkbox[data-group="${groupName}"]`);
+            if (rowCheckboxes.length > 0) {
+                const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+                toggle.checked = allChecked;
+            }
+        });
+    };
+
+    const init = () => {
+        const searchInput = document.getElementById('module-search');
+        const selectAllBtn = document.querySelector('[data-action="select-all"]');
+        const deselectAllBtn = document.querySelector('[data-action="deselect-all"]');
+        const allCheckboxes = document.querySelectorAll('.permission-checkbox');
+        const rowToggles = document.querySelectorAll('[data-row-toggle]');
+        const rows = document.querySelectorAll('.permission-row');
+
+        if (allCheckboxes.length === 0 && rowToggles.length === 0) return;
+
+        // 1. Search/Filter Modules
+        searchInput?.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            let hasResults = false;
+
+            rows.forEach(row => {
+                const text = row.getAttribute('data-search-text') || '';
+                if (text.includes(query)) {
+                    row.style.display = '';
+                    hasResults = true;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const noResultsDiv = document.getElementById('no-permissions-found');
+            if (noResultsDiv) {
+                if (hasResults) {
+                    noResultsDiv.classList.add('hidden');
+                } else {
+                    noResultsDiv.classList.remove('hidden');
+                }
+            }
+        });
+
+        // 2. Global Actions
+        selectAllBtn?.addEventListener('click', () => {
+            allCheckboxes.forEach(cb => cb.checked = true);
+            rowToggles.forEach(toggle => toggle.checked = true);
+        });
+
+        deselectAllBtn?.addEventListener('click', () => {
+            allCheckboxes.forEach(cb => cb.checked = false);
+            rowToggles.forEach(toggle => toggle.checked = false);
+        });
+
+        // 3. Row-Level Selection Toggle
+        rowToggles.forEach(toggle => {
+            toggle.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                const groupName = e.target.getAttribute('data-row-toggle');
+                const rowCheckboxes = document.querySelectorAll(`.permission-checkbox[data-group="${groupName}"]`);
+                rowCheckboxes.forEach(cb => cb.checked = isChecked);
+            });
+        });
+
+        // 4. Update row toggles when individual checkbox is toggled
+        allCheckboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                syncRowToggles();
+            });
+        });
+
+        // 5. Initial Page Load Sync (Edit View)
+        syncRowToggles();
+    };
+
+    return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    RolePermissions.init();
+});

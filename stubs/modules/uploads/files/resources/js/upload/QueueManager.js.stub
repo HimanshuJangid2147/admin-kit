@@ -1,0 +1,163 @@
+import { ChunkUploader } from './ChunkUploader.js';
+import { createUuid } from './uuid.js';
+
+export class QueueManager {
+    constructor(concurrency = 3, maxRetries = 2, api = null) {
+        this.concurrency = concurrency;
+        this.maxRetries = maxRetries;
+        this.api = api;
+        this.queue = [];
+        this.activeCount = 0;
+        this.onQueueUpdate = null;
+        this.onFileComplete = null;
+        this.onFileProgress = null;
+        this.onFileError = null;
+    }
+
+    addFile(file, chunkSize = 2 * 1024 * 1024, profile = 'image') {
+        const item = {
+            id: createUuid(),
+            file,
+            progress: 0,
+            status: 'queued', // queued | uploading | completed | failed
+            retries: 0,
+            profile,
+            uploader: new ChunkUploader(file, chunkSize, profile),
+            result: null,
+            error: null,
+        };
+
+        this.queue.push(item);
+        this.notifyUpdate();
+        this.processNext();
+        return item;
+    }
+
+    notifyUpdate() {
+        if (typeof this.onQueueUpdate === 'function') {
+            this.onQueueUpdate(this.queue);
+        }
+    }
+
+    processNext() {
+        if (this.activeCount >= this.concurrency) return;
+
+        const nextItem = this.queue.find((i) => i.status === 'queued');
+        if (!nextItem) return;
+
+        this.activeCount++;
+        nextItem.status = 'uploading';
+        this.notifyUpdate();
+
+        nextItem.uploader
+            .upload((percent) => {
+                nextItem.progress = percent;
+                if (typeof this.onFileProgress === 'function') {
+                    this.onFileProgress(nextItem);
+                }
+                this.notifyUpdate();
+            })
+            .then((result) => {
+                nextItem.status = 'completed';
+                nextItem.progress = 100;
+                nextItem.result = result;
+                this.activeCount--;
+
+                if (typeof this.onFileComplete === 'function') {
+                    this.onFileComplete(nextItem);
+                }
+
+                this.notifyUpdate();
+                this.processNext();
+            })
+            .catch((err) => {
+                if (nextItem.retries < this.maxRetries && err.name !== 'CanceledError' && err.name !== 'AbortError') {
+                    nextItem.retries++;
+                    nextItem.status = 'queued';
+                    nextItem.uploader = new ChunkUploader(nextItem.file, nextItem.uploader.chunkSize, nextItem.profile);
+                    this.activeCount--;
+                    this.processNext();
+                } else {
+                    nextItem.status = 'failed';
+                    const defaultMsg = typeof window.trans === 'function' ? window.trans('Upload failed.') : 'Upload failed.';
+                    const rawMsg = err.response?.data?.errors 
+                        ? Object.values(err.response.data.errors).flat().join(', ') 
+                        : (err.response?.data?.message || err.message || defaultMsg);
+                    nextItem.error = typeof window.trans === 'function' ? window.trans(rawMsg) : rawMsg;
+                    this.activeCount--;
+
+                    if (typeof this.onFileError === 'function') {
+                        this.onFileError(nextItem);
+                    }
+
+                    this.notifyUpdate();
+                    this.processNext();
+                }
+            });
+    }
+
+    clearQueue() {
+        this.queue.forEach((item) => {
+            if (item.status === 'uploading' && item.uploader) {
+                try {
+                    item.uploader.cancel();
+                } catch (e) {
+                    // Ignore cancel errors
+                }
+            }
+            if (item.result?.uuid && this.api) {
+                this.api.cancelUpload(item.result.uuid).catch(() => {});
+            }
+        });
+        this.queue = [];
+        this.activeCount = 0;
+        this.notifyUpdate();
+    }
+
+    cancelItem(id) {
+        const item = this.queue.find((i) => i.id === id);
+        if (!item) return;
+
+        if (item.status === 'uploading') {
+            item.uploader.cancel();
+            this.activeCount--;
+        }
+
+        item.status = 'failed';
+        item.error = typeof window.trans === 'function' ? window.trans('Cancelled by user') : 'Cancelled by user';
+        this.notifyUpdate();
+        this.processNext();
+    }
+
+    removeItem(id) {
+        const index = this.queue.findIndex((i) => i.id === id);
+        if (index === -1) return;
+
+        const item = this.queue[index];
+
+        if (item.status === 'uploading') {
+            item.uploader.cancel();
+            this.activeCount--;
+        }
+
+        if (item.result?.uuid && this.api) {
+            this.api.cancelUpload(item.result.uuid).catch(() => {});
+        }
+
+        this.queue.splice(index, 1);
+        this.notifyUpdate();
+        this.processNext();
+    }
+
+    retryItem(id) {
+        const item = this.queue.find((i) => i.id === id);
+        if (!item || item.status !== 'failed') return;
+
+        item.status = 'queued';
+        item.progress = 0;
+        item.error = null;
+        item.uploader = new ChunkUploader(item.file, item.uploader.chunkSize, item.profile);
+        this.notifyUpdate();
+        this.processNext();
+    }
+}

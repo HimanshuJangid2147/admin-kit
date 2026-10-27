@@ -1,0 +1,46 @@
+@props([
+    'name',
+    'value' => '',
+    'label' => '',
+    'required' => false
+])
+
+@php
+    $t = fn ($text) => function_exists('statictranslations') ? statictranslations($text) : __($text);
+@endphp
+
+<div class="flex flex-col gap-2 relative icon-picker-container" data-picker-name="{{ $name }}">
+    @if ($label)
+        <label class="text-xs font-bold text-foreground uppercase tracking-wider">
+            {{ $label }} @if ($required) <span class="text-destructive">*</span> @endif
+        </label>
+    @endif
+
+    <div class="relative flex items-center group">
+        <div class="absolute left-3 w-6 h-6 flex items-center justify-center border-r border-border/40 pr-2.5 text-primary icon-preview">
+            @if ($value)
+                <i class="fa-solid fa-{{ $value }} text-sm"></i>
+            @else
+                <i class="fa-solid fa-circle-question text-sm text-muted-foreground/35"></i>
+            @endif
+        </div>
+
+        <input
+            type="text"
+            name="{{ $name }}"
+            value="{{ old($name, $value) }}"
+            placeholder="{{ $t('Click trigger to choose icon') }}"
+            class="icon-picker-input h-11 w-full rounded-xl border border-border/70 bg-card pl-11 pr-12 text-sm text-foreground hover:border-primary/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all duration-300 shadow-sm cursor-pointer"
+            @if ($required) required @endif
+            readonly
+        >
+
+        <button
+            type="button"
+            class="icon-picker-trigger absolute right-3 flex items-center justify-center h-7 w-7 rounded-lg bg-muted/65 hover:bg-primary/10 hover:text-primary text-muted-foreground transition-all duration-200 border border-border/50 cursor-pointer"
+            aria-label="{{ $t('Choose icon') }}"
+        >
+            <i class="fa-solid fa-border-all text-xs"></i>
+        </button>
+    </div>
+</div>

@@ -1,0 +1,268 @@
+@extends('layouts.app')
+
+@section('title', statictranslations('Add Role'))
+@section('page-title', statictranslations('Add Role'))
+
+@section('content')
+<div class="max-w-screen mx-auto space-y-6">
+
+    <form action="{{ route('admin.roles.store') }}" method="POST">
+        @csrf
+
+        {{-- Page Header & Floating Actions --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-xl md:text-2xl font-serif font-black text-zinc-900 dark:text-white leading-tight">
+                    {{ statictranslations('Create System Role') }}
+                </h1>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                    {{ statictranslations('Define a new security role and assign explicit system permissions.') }}
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{{ route('admin.roles.index') }}" class="btn-secondary py-2 px-4 text-xs">
+                    <x-lucide-arrow-left class="w-3.5 h-3.5" />
+                    {{ statictranslations('Cancel') }}
+                </a>
+                <button type="submit" class="btn-gold py-2 px-6 text-xs group relative overflow-hidden">
+                    <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></span>
+                    <span class="relative z-10 flex items-center gap-2">
+                        <x-lucide-shield-plus class="w-3.5 h-3.5" />
+                        {{ statictranslations('Create Role') }}
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        {{-- Error Display --}}
+        @if ($errors->any())
+            <div class="mb-6 p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-xs text-rose-600 dark:text-rose-400 space-y-1 animate-fade-in backdrop-blur-md">
+                <div class="font-bold flex items-center gap-1.5 mb-1">
+                    <x-lucide-alert-triangle class="w-3.5 h-3.5" />
+                    {{ statictranslations('Please correct the following errors:') }}
+                </div>
+                <ul class="list-disc pl-4 space-y-0.5">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Asymmetrical Bento Grid --}}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            {{-- LEFT COLUMN (4/12) - Role Identity --}}
+            <div class="lg:col-span-4 space-y-6">
+
+                <div class="lj-card p-6 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(212,175,55,0.08)_0%,_transparent_70%)] pointer-events-none" aria-hidden="true"></div>
+
+                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-5 border-b border-zinc-200/50 dark:border-white/5 pb-2">
+                        {{ statictranslations('Role Identity') }}
+                    </h3>
+
+                    <div class="space-y-2 relative z-10">
+                        <label for="name" class="lj-label">{{ statictranslations('Role Name') }} <span class="text-rose-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                                <x-lucide-shield class="w-4 h-4" />
+                            </span>
+                            <input
+                                type="text"
+                                name="name"
+                                id="name"
+                                value="{{ old('name') }}"
+                                required
+                                class="lj-input pl-11 py-2.5"
+                                placeholder="{{ statictranslations('e.g. Super Admin') }}"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lj-card p-6 bg-zinc-50/50 dark:bg-zinc-800/20 border-dashed">
+                    <h3 class="flex items-center gap-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-3">
+                        <x-lucide-zap class="w-4 h-4 text-lj-gold" />
+                        {{ statictranslations('Pro Tip') }}
+                    </h3>
+                    <p class="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        {{ statictranslations('Use the "Select All" buttons above the matrix or next to each module group to quickly assign multiple permissions at once.') }}
+                    </p>
+                </div>
+            </div>
+
+            {{-- RIGHT COLUMN (8/12) - Permissions Matrix --}}
+            <div class="lg:col-span-8">
+                <div class="lj-card p-6 md:p-8 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(212,175,55,0.04)_0%,_transparent_50%)] pointer-events-none" aria-hidden="true"></div>
+
+                    {{-- Live Search & Header Actions --}}
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-4 z-10 relative">
+                        <div class="relative max-w-xs flex-1">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                                <x-lucide-search class="w-4 h-4" />
+                            </span>
+                            <input
+                                type="text"
+                                id="module-search"
+                                placeholder="{{ statictranslations('Search modules...') }}"
+                                class="lj-input pl-10 py-2"
+                            >
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" data-action="select-all" class="text-[10px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-300 hover:text-lj-gold transition-colors px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-md border border-zinc-200 dark:border-zinc-700 shadow-sm select-none">
+                                {{ statictranslations('Select All') }}
+                            </button>
+                            <button type="button" data-action="deselect-all" class="text-[10px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-300 hover:text-rose-500 transition-colors px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-md border border-zinc-200 dark:border-zinc-700 shadow-sm select-none">
+                                {{ statictranslations('Clear') }}
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Tabular Matrix Grid --}}
+                    <div class="overflow-x-auto rounded-xl border border-zinc-200/50 dark:border-white/5 bg-white/40 dark:bg-zinc-900/40 relative z-10">
+                        <table class="w-full text-left border-collapse" id="permissions-table">
+                            <thead>
+                                <tr class="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-[10px] font-bold uppercase tracking-widest text-zinc-500 select-none">
+                                    <th class="p-3 text-xs font-bold uppercase tracking-wider text-zinc-500">{{ statictranslations('Module') }}</th>
+                                    <th class="p-3 text-xs font-bold uppercase tracking-wider text-zinc-500 text-center w-16">{{ statictranslations('Read') }}</th>
+                                    <th class="p-3 text-xs font-bold uppercase tracking-wider text-zinc-500 text-center w-16">{{ statictranslations('Create') }}</th>
+                                    <th class="p-3 text-xs font-bold uppercase tracking-wider text-zinc-500 text-center w-16">{{ statictranslations('Update') }}</th>
+                                    <th class="p-3 text-xs font-bold uppercase tracking-wider text-zinc-500 text-center w-16">{{ statictranslations('Delete') }}</th>
+                                    <th class="p-3 text-xs font-bold uppercase tracking-wider text-zinc-500 text-center w-20">{{ statictranslations('Select All') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-200/50 dark:divide-white/5">
+                                @foreach($permissionsGrouped as $group => $perms)
+                                    @php
+                                        $formattedGroup = preg_replace('/(?<!^)[A-Z]/', ' $0', $group);
+                                        $readPerm = $perms->first(fn($p) => str_ends_with($p->name, '.read'));
+                                        $createPerm = $perms->first(fn($p) => str_ends_with($p->name, '.create'));
+                                        $updatePerm = $perms->first(fn($p) => str_ends_with($p->name, '.update'));
+                                        $deletePerm = $perms->first(fn($p) => str_ends_with($p->name, '.delete'));
+                                    @endphp
+                                    <tr class="permission-row hover:bg-lj-gold/[0.02] dark:hover:bg-white/[0.01] transition-colors" data-group="{{ $group }}" data-search-text="{{ strtolower($formattedGroup) }}">
+                                        <td class="p-3 text-xs font-semibold text-zinc-700 dark:text-zinc-300 capitalize-first">{{ $formattedGroup }}</td>
+                                        
+                                        {{-- Read --}}
+                                        <td class="p-3 text-center">
+                                            @if($readPerm)
+                                                <label class="relative inline-flex items-center justify-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="permissions[]"
+                                                        id="perm_{{ $readPerm->id }}"
+                                                        value="{{ $readPerm->id }}"
+                                                        data-group="{{ $group }}"
+                                                        class="peer sr-only permission-checkbox"
+                                                        {{ collect(old('permissions'))->contains($readPerm->id) ? 'checked' : '' }}
+                                                    >
+                                                    <div class="w-4 h-4 rounded border border-zinc-300 dark:border-zinc-600 peer-checked:bg-lj-gold peer-checked:border-lj-gold transition-colors flex items-center justify-center">
+                                                        <x-lucide-check class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                                    </div>
+                                                </label>
+                                            @else
+                                                <span class="text-zinc-300 dark:text-zinc-700 font-bold select-none">-</span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Create --}}
+                                        <td class="p-3 text-center">
+                                            @if($createPerm)
+                                                <label class="relative inline-flex items-center justify-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="permissions[]"
+                                                        id="perm_{{ $createPerm->id }}"
+                                                        value="{{ $createPerm->id }}"
+                                                        data-group="{{ $group }}"
+                                                        class="peer sr-only permission-checkbox"
+                                                        {{ collect(old('permissions'))->contains($createPerm->id) ? 'checked' : '' }}
+                                                    >
+                                                    <div class="w-4 h-4 rounded border border-zinc-300 dark:border-zinc-600 peer-checked:bg-lj-gold peer-checked:border-lj-gold transition-colors flex items-center justify-center">
+                                                        <x-lucide-check class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                                    </div>
+                                                </label>
+                                            @else
+                                                <span class="text-zinc-300 dark:text-zinc-700 font-bold select-none">-</span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Update --}}
+                                        <td class="p-3 text-center">
+                                            @if($updatePerm)
+                                                <label class="relative inline-flex items-center justify-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="permissions[]"
+                                                        id="perm_{{ $updatePerm->id }}"
+                                                        value="{{ $updatePerm->id }}"
+                                                        data-group="{{ $group }}"
+                                                        class="peer sr-only permission-checkbox"
+                                                        {{ collect(old('permissions'))->contains($updatePerm->id) ? 'checked' : '' }}
+                                                    >
+                                                    <div class="w-4 h-4 rounded border border-zinc-300 dark:border-zinc-600 peer-checked:bg-lj-gold peer-checked:border-lj-gold transition-colors flex items-center justify-center">
+                                                        <x-lucide-check class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                                    </div>
+                                                </label>
+                                            @else
+                                                <span class="text-zinc-300 dark:text-zinc-700 font-bold select-none">-</span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Delete --}}
+                                        <td class="p-3 text-center">
+                                            @if($deletePerm)
+                                                <label class="relative inline-flex items-center justify-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="permissions[]"
+                                                        id="perm_{{ $deletePerm->id }}"
+                                                        value="{{ $deletePerm->id }}"
+                                                        data-group="{{ $group }}"
+                                                        class="peer sr-only permission-checkbox"
+                                                        {{ collect(old('permissions'))->contains($deletePerm->id) ? 'checked' : '' }}
+                                                    >
+                                                    <div class="w-4 h-4 rounded border border-zinc-300 dark:border-zinc-600 peer-checked:bg-lj-gold peer-checked:border-lj-gold transition-colors flex items-center justify-center">
+                                                        <x-lucide-check class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                                    </div>
+                                                </label>
+                                            @else
+                                                <span class="text-zinc-300 dark:text-zinc-700 font-bold select-none">-</span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Select All for row --}}
+                                        <td class="p-3 text-center">
+                                            <label class="relative inline-flex items-center justify-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    data-row-toggle="{{ $group }}"
+                                                    class="peer sr-only row-toggle-checkbox"
+                                                >
+                                                <div class="w-4 h-4 rounded border border-zinc-300 dark:border-zinc-600 peer-checked:bg-lj-gold peer-checked:border-lj-gold transition-colors flex items-center justify-center">
+                                                    <x-lucide-check class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                                </div>
+                                            </label>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                        <div id="no-permissions-found" class="hidden p-8 text-center text-sm text-zinc-500 dark:text-zinc-400 select-none">
+                            <x-lucide-info class="w-6 h-6 text-zinc-400 mx-auto mb-2" />
+                            {{ statictranslations('No matching modules found.') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+@endsection
+
+@push('scripts')
+    @vite('resources/js/pages/roleForm.js')
+@endpush

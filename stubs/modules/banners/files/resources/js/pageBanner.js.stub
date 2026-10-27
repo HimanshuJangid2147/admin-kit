@@ -1,0 +1,419 @@
+/**
+ * Page Banner Upload & Dynamic UI Logic
+ */
+document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById("banner-upload-modal");
+    const panel = document.getElementById("banner-upload-panel");
+    const closeBtn = document.getElementById("banner-upload-close");
+    const cancelBtn = document.getElementById("banner-upload-cancel");
+    const triggers = document.querySelectorAll(".change-banner-trigger-btn");
+    
+    const pageKeyInput = document.getElementById("banner-upload-page-key");
+    const fileInput = document.getElementById("banner-file-input");
+    const dropzone = document.getElementById("banner-dropzone");
+    const emptyState = document.getElementById("dropzone-empty-state");
+    const previewState = document.getElementById("dropzone-preview-state");
+    const previewImg = document.getElementById("banner-modal-preview-img");
+    
+    const feedback = document.getElementById("banner-modal-feedback");
+    const submitBtn = document.getElementById("banner-upload-submit");
+    const submitText = document.getElementById("banner-submit-text");
+    const submitSpinner = document.getElementById("banner-submit-spinner");
+    const form = document.getElementById("banner-upload-form");
+    
+    if (!modal) return;
+
+    // Character Counter Helper for Banner Descriptions (Max 150 chars)
+    function updateCharCounters() {
+        ['en', 'fr'].forEach(lang => {
+            // Modal banner description counters
+            const textarea = document.getElementById(`description_${lang}`);
+            const counter = document.getElementById(`description_${lang}_counter`);
+            if (textarea && counter) {
+                const len = textarea.value.length;
+                counter.textContent = `${len}/150`;
+                if (len >= 150) {
+                    counter.classList.add("text-red-500", "font-bold");
+                    counter.classList.remove("text-muted-foreground");
+                } else {
+                    counter.classList.remove("text-red-500", "font-bold");
+                    counter.classList.add("text-muted-foreground");
+                }
+            }
+
+            // Settings sitemap banner description counters
+            const sitemapTextarea = document.getElementById(`sitemap_description_${lang}`);
+            const sitemapCounter = document.getElementById(`sitemap_description_${lang}_counter`);
+            if (sitemapTextarea && sitemapCounter) {
+                const len = sitemapTextarea.value.length;
+                sitemapCounter.textContent = `${len}/150`;
+                if (len >= 150) {
+                    sitemapCounter.classList.add("text-red-500", "font-bold");
+                    sitemapCounter.classList.remove("text-muted-foreground");
+                } else {
+                    sitemapCounter.classList.remove("text-red-500", "font-bold");
+                    sitemapCounter.classList.add("text-muted-foreground");
+                }
+            }
+        });
+    }
+
+    // Initial counter sync on load
+    updateCharCounters();
+
+    ['description_en', 'description_fr', 'sitemap_description_en', 'sitemap_description_fr'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener("input", updateCharCounters);
+        }
+    });
+
+    // Tab Switcher inside Modal
+    const tabBtns = document.querySelectorAll(".banner-tab-btn");
+    tabBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const targetTab = btn.getAttribute("data-banner-tab");
+            tabBtns.forEach(b => {
+                b.classList.remove("bg-background", "text-foreground");
+                b.classList.add("text-muted-foreground");
+            });
+            btn.classList.add("bg-background", "text-foreground");
+            btn.classList.remove("text-muted-foreground");
+
+            document.querySelectorAll(".banner-tab-content").forEach(content => {
+                if (content.id.endsWith(targetTab)) {
+                    content.classList.remove("hidden");
+                } else {
+                    content.classList.add("hidden");
+                }
+            });
+        });
+    });
+
+    // Open Modal
+    triggers.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const pageKey = btn.getAttribute("data-page-key");
+            const pageTitle = btn.getAttribute("data-page-title");
+            const hasCustomBanner = btn.getAttribute("data-has-custom-banner") === "true";
+            
+            const titleEn = btn.getAttribute("data-banner-title-en") || "";
+            const titleFr = btn.getAttribute("data-banner-title-fr") || "";
+            const eyebrowEn = btn.getAttribute("data-banner-eyebrow-en") || "";
+            const eyebrowFr = btn.getAttribute("data-banner-eyebrow-fr") || "";
+            const descriptionEn = btn.getAttribute("data-banner-description-en") || "";
+            const descriptionFr = btn.getAttribute("data-banner-description-fr") || "";
+            
+            // Set fields
+            pageKeyInput.value = pageKey;
+            
+            // Reset state
+            resetUploadForm();
+
+            // Set default tab to English
+            const defaultTabBtn = document.querySelector('.banner-tab-btn[data-banner-tab="en"]');
+            if (defaultTabBtn) {
+                defaultTabBtn.click();
+            }
+
+            const currentLocale = document.documentElement.lang || "en";
+
+            // Pre-fill text inputs
+            const descEnInput = document.getElementById("description_en");
+            const descFrInput = document.getElementById("description_fr");
+            
+            document.getElementById("title_en").value = titleEn || (currentLocale === 'en' ? pageTitle : '');
+            document.getElementById("title_fr").value = titleFr || (currentLocale === 'fr' ? pageTitle : '');
+            document.getElementById("eyebrow_text_en").value = eyebrowEn;
+            document.getElementById("eyebrow_text_fr").value = eyebrowFr;
+            if (descEnInput) descEnInput.value = descriptionEn;
+            if (descFrInput) descFrInput.value = descriptionFr;
+
+            updateCharCounters();
+
+            // Set current status indicator
+            const statusBox = document.getElementById("banner-current-status-box");
+            const statusDot = document.getElementById("banner-status-dot");
+            const statusText = document.getElementById("banner-status-text");
+
+            if (statusBox && statusDot && statusText) {
+                if (hasCustomBanner) {
+                    statusBox.className = "px-4 py-2.5 rounded-xl border text-[11px] flex items-center gap-2 transition-all duration-200 border-emerald-500/20 bg-emerald-500/5 text-emerald-400";
+                    statusDot.className = "h-2 w-2 rounded-full shrink-0 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]";
+                    statusText.innerText = window.trans("Custom banner is currently uploaded and active");
+
+                    // Pre-fill existing banner image in preview container
+                    const bannerDiv = document.getElementById(`page-banner-${pageKey}`);
+                    if (bannerDiv) {
+                        const bgImgUrl = bannerDiv.style.backgroundImage.slice(4, -1).replace(/"/g, "");
+                        if (bgImgUrl && bgImgUrl !== "none") {
+                            if (previewImg) previewImg.src = bgImgUrl;
+                            if (emptyState) emptyState.classList.add("hidden");
+                            if (previewState) previewState.classList.remove("hidden");
+                        }
+                    }
+                    if (submitBtn) submitBtn.removeAttribute("disabled");
+                } else {
+                    statusBox.className = "px-4 py-2.5 rounded-xl border text-[11px] flex items-center gap-2 transition-all duration-200 border-amber-500/20 bg-amber-500/5 text-amber-400";
+                    statusDot.className = "h-2 w-2 rounded-full shrink-0 bg-amber-500";
+                    statusText.innerText = window.trans("No custom banner currently uploaded (using default fallback)");
+                }
+            }
+
+            // Animate In
+            modal.classList.remove("opacity-0", "pointer-events-none");
+            modal.classList.add("opacity-100");
+            panel.classList.remove("scale-95", "opacity-0");
+            panel.classList.add("scale-100", "opacity-100");
+        });
+    });
+
+    // Close Modal
+    function closeModal() {
+        modal.classList.remove("opacity-100");
+        modal.classList.add("opacity-0", "pointer-events-none");
+        panel.classList.remove("scale-100", "opacity-100");
+        panel.classList.add("scale-95", "opacity-0");
+    }
+
+    [closeBtn, cancelBtn].forEach(btn => {
+        if (btn) btn.addEventListener("click", closeModal);
+    });
+
+    // Close on outer click
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Handle Drag & Drop Events (if legacy dropzone exists)
+    if (dropzone) {
+        ["dragenter", "dragover"].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add("border-primary", "bg-primary/[0.03]");
+            }, false);
+        });
+
+        ["dragleave", "drop"].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove("border-primary", "bg-primary/[0.03]");
+            }, false);
+        });
+
+        dropzone.addEventListener("drop", (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length && fileInput) {
+                fileInput.files = files;
+                handleFileSelect(files[0]);
+            }
+        });
+    }
+
+    // Handle standard File Input click if present
+    if (fileInput) {
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files.length) {
+                handleFileSelect(fileInput.files[0]);
+            }
+        });
+    }
+
+    // File selection / Validation
+    function handleFileSelect(file) {
+        if (feedback) {
+            feedback.classList.add("hidden");
+            feedback.innerHTML = "";
+        }
+
+        // Basic type validation
+        if (!file.type.match("image.*")) {
+            showError(window.trans("Please select a valid image file (JPG, PNG, WEBP, etc.)."));
+            return;
+        }
+
+        // Size validation (Max 5MB to match form request)
+        if (file.size > 5 * 1024 * 1024) {
+            showError(window.trans("The image file is too large. Maximum size is 5MB."));
+            return;
+        }
+
+        // Preview local image
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (previewImg) previewImg.src = e.target.result;
+            if (emptyState) emptyState.classList.add("hidden");
+            if (previewState) previewState.classList.remove("hidden");
+            if (submitBtn) submitBtn.removeAttribute("disabled");
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function showError(msg) {
+        if (feedback) {
+            feedback.innerHTML = msg;
+            feedback.classList.remove("hidden");
+        }
+        if (submitBtn) submitBtn.setAttribute("disabled", "true");
+        resetPreview();
+    }
+
+    function resetPreview() {
+        if (emptyState) emptyState.classList.remove("hidden");
+        if (previewState) previewState.classList.add("hidden");
+        if (previewImg) previewImg.src = "";
+    }
+
+    function resetUploadForm() {
+        if (form) form.reset();
+        resetPreview();
+        if (submitBtn) submitBtn.setAttribute("disabled", "true");
+        if (feedback) {
+            feedback.classList.add("hidden");
+            feedback.innerHTML = "";
+        }
+        
+        // Reset loading state
+        if (submitBtn) submitBtn.removeAttribute("disabled");
+        if (submitText) submitText.classList.remove("hidden");
+        if (submitSpinner) submitSpinner.classList.add("hidden");
+    }
+
+    // Submit via AJAX
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            
+            const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+            const stagedInput = form.querySelector('input[name="image"]');
+            const stagedUuid = stagedInput ? stagedInput.value : null;
+
+            const pageKey = pageKeyInput ? pageKeyInput.value : "";
+            const titleValEn = document.getElementById("title_en") ? document.getElementById("title_en").value : "";
+            const titleValFr = document.getElementById("title_fr") ? document.getElementById("title_fr").value : "";
+            const eyebrowValEn = document.getElementById("eyebrow_text_en") ? document.getElementById("eyebrow_text_en").value : "";
+            const eyebrowValFr = document.getElementById("eyebrow_text_fr") ? document.getElementById("eyebrow_text_fr").value : "";
+            const descValEn = document.getElementById("description_en") ? document.getElementById("description_en").value : "";
+            const descValFr = document.getElementById("description_fr") ? document.getElementById("description_fr").value : "";
+
+            if (!pageKey || !titleValEn) return;
+
+            // Show loading state
+            if (submitBtn) submitBtn.setAttribute("disabled", "true");
+            if (submitText) submitText.classList.add("hidden");
+            if (submitSpinner) submitSpinner.classList.remove("hidden");
+            if (feedback) feedback.classList.add("hidden");
+
+            const formData = new FormData();
+            formData.append("for_page", pageKey);
+            formData.append("title[en]", titleValEn);
+            if (titleValFr) formData.append("title[fr]", titleValFr);
+            if (eyebrowValEn) formData.append("eyebrow_text[en]", eyebrowValEn);
+            if (eyebrowValFr) formData.append("eyebrow_text[fr]", eyebrowValFr);
+            if (descValEn) formData.append("description[en]", descValEn);
+            if (descValFr) formData.append("description[fr]", descValFr);
+            if (stagedUuid) {
+                formData.append("image", stagedUuid);
+            } else if (file) {
+                formData.append("image", file);
+            }
+
+        const uploadUrl = (form && form.getAttribute("action") && form.getAttribute("action") !== "#") ? form.getAttribute("action") : "/admin/page-banners/upload";
+        window.axios.post(uploadUrl, formData, {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        })
+        .then(response => {
+            if (response.data && response.data.success) {
+                const bannerData = response.data.data;
+
+                // Update the page header banner background and texts in real-time!
+                const bannerDiv = document.getElementById(`page-banner-${pageKey}`);
+                if (bannerDiv) {
+                    if (bannerData.image) {
+                        bannerDiv.style.backgroundImage = `url('/storage/${bannerData.image}')`;
+                    }
+                    // Remove decorative blurred shapes as we now have an actual uploaded image
+                    const shapes = bannerDiv.querySelectorAll(".blur-3xl");
+                    shapes.forEach(el => el.remove());
+
+                    // Update Text Values in DOM using active locale
+                    const currentLocale = document.documentElement.lang || "en";
+                    const resolvedTitle = (typeof bannerData.title === 'object' && bannerData.title) ? (bannerData.title[currentLocale] || bannerData.title['en'] || '') : (bannerData.title || '');
+                    const resolvedEyebrow = (typeof bannerData.eyebrow_text === 'object' && bannerData.eyebrow_text) ? (bannerData.eyebrow_text[currentLocale] || bannerData.eyebrow_text['en'] || '') : (bannerData.eyebrow_text || '');
+                    const resolvedDesc = (typeof bannerData.description === 'object' && bannerData.description) ? (bannerData.description[currentLocale] || bannerData.description['en'] || '') : (bannerData.description || '');
+
+                    const contentDiv = bannerDiv.querySelector(".relative.z-10.max-w-2xl");
+                    if (contentDiv) {
+                        // Handle Eyebrow text
+                        let eyebrowSpan = contentDiv.querySelector("span");
+                        if (resolvedEyebrow) {
+                            if (!eyebrowSpan) {
+                                eyebrowSpan = document.createElement("span");
+                                eyebrowSpan.className = "text-[10px] font-sans font-semibold text-brand-orange tracking-[0.2em] uppercase block mb-1";
+                                contentDiv.insertBefore(eyebrowSpan, contentDiv.firstChild);
+                            }
+                            eyebrowSpan.innerText = resolvedEyebrow;
+                        } else if (eyebrowSpan) {
+                            eyebrowSpan.remove();
+                        }
+
+                        // Handle Title text
+                        const titleH1 = contentDiv.querySelector("h1");
+                        if (titleH1) titleH1.innerText = resolvedTitle;
+
+                        // Handle Description text
+                        const descP = contentDiv.querySelector("p");
+                        if (descP) descP.innerText = resolvedDesc;
+                    }
+                }
+
+                // Update trigger attributes to keep status synchronized
+                const activeTrigger = document.querySelector(`.change-banner-trigger-btn[data-page-key="${pageKey}"]`);
+                if (activeTrigger) {
+                    activeTrigger.setAttribute("data-has-custom-banner", "true");
+                    activeTrigger.setAttribute("data-banner-title-en", titleValEn);
+                    activeTrigger.setAttribute("data-banner-title-fr", titleValFr);
+                    activeTrigger.setAttribute("data-banner-eyebrow-en", eyebrowValEn);
+                    activeTrigger.setAttribute("data-banner-eyebrow-fr", eyebrowValFr);
+                    activeTrigger.setAttribute("data-banner-description-en", descValEn);
+                    activeTrigger.setAttribute("data-banner-description-fr", descValFr);
+                }
+
+                // Show success toast
+                window.Toast.fire({
+                    icon: "success",
+                    html: window.trans("Page banner updated successfully!")
+                });
+
+                closeModal();
+            } else {
+                showError(window.trans("Upload failed. Please try again."));
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            let message = window.trans("An error occurred during upload.");
+            if (err.response && err.response.data) {
+                if (err.response.data.errors) {
+                    message = Object.values(err.response.data.errors).flatMap(arr => arr).join("<br>");
+                } else if (err.response.data.message) {
+                    message = err.response.data.message;
+                }
+            }
+            showError(message);
+        })
+        .finally(() => {
+            if (submitText) submitText.classList.remove("hidden");
+            if (submitSpinner) submitSpinner.classList.add("hidden");
+            if (submitBtn) submitBtn.removeAttribute("disabled");
+        });
+    });
+    }
+});

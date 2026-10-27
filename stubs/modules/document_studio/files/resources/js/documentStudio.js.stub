@@ -1,0 +1,612 @@
+/**
+ * Satguru Travel Admin - TipTap Document Studio
+ * Modern ProseMirror/TipTap rich text & table editor for CMS policy documents.
+ * Guarantees clean semantic HTML, first-class table tools, and smooth translation round-tripping.
+ */
+
+import { Editor } from '@tiptap/core';
+import StarterKit from '@tiptap/starter-kit';
+import { Table, TableRow, TableHeader, TableCell } from '@tiptap/extension-table';
+import { BubbleMenu } from '@tiptap/extension-bubble-menu';
+
+/**
+ * Strips all inline styles, classes, non-semantic wrapper tags (div, span, font),
+ * and browser contenteditable artifacts, leaving pure semantic HTML.
+ */
+export function cleanSemanticHtml(html) {
+    if (!html || typeof html !== 'string') return '';
+    const trimmed = html.trim();
+    if (!trimmed) return '';
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<body>${trimmed}</body>`, 'text/html');
+    const body = doc.body;
+
+    const allowedTags = new Set([
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr',
+        'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'sub', 'sup',
+        'ul', 'ol', 'li', 'blockquote',
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+        'a'
+    ]);
+
+    function cleanNode(node) {
+        if (!node) return;
+
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const tagName = node.tagName.toLowerCase();
+
+            // If it's the body node, only process its children
+            if (tagName === 'body') {
+                for (let i = node.childNodes.length - 1; i >= 0; i--) {
+                    cleanNode(node.childNodes[i]);
+                }
+                return;
+            }
+
+            // Process children first from end to start so element unwrapping doesn't skip siblings
+            for (let i = node.childNodes.length - 1; i >= 0; i--) {
+                cleanNode(node.childNodes[i]);
+            }
+
+            // Remove dangerous tags completely
+            if (['script', 'style', 'iframe', 'object', 'embed', 'noscript'].includes(tagName)) {
+                node.remove();
+                return;
+            }
+
+            // If tag is not in allowedTags (e.g. span, font, div, section, article), unwrap it
+            if (!allowedTags.has(tagName)) {
+                const parent = node.parentNode;
+                if (parent) {
+                    while (node.firstChild) {
+                        parent.insertBefore(node.firstChild, node);
+                    }
+                    parent.removeChild(node);
+                }
+                return;
+            }
+
+            // Strip style, class, and non-semantic attributes
+            node.removeAttribute('style');
+            node.removeAttribute('class');
+            node.removeAttribute('contenteditable');
+            node.removeAttribute('spellcheck');
+            node.removeAttribute('dir');
+            node.removeAttribute('data-slate-node');
+
+            // Retain allowed attributes only:
+            // th/td: colspan, rowspan
+            // a: href, title, target
+            const attrs = Array.from(node.attributes);
+            for (const attr of attrs) {
+                const attrName = attr.name.toLowerCase();
+                if (tagName === 'th' || tagName === 'td') {
+                    if (attrName !== 'colspan' && attrName !== 'rowspan') {
+                        node.removeAttribute(attr.name);
+                    }
+                } else if (tagName === 'a') {
+                    if (attrName !== 'href' && attrName !== 'title' && attrName !== 'target') {
+                        node.removeAttribute(attr.name);
+                    }
+                } else {
+                    node.removeAttribute(attr.name);
+                }
+            }
+        }
+    }
+
+    cleanNode(body);
+    return body.innerHTML.trim();
+}
+
+/**
+ * Formats and indents semantic HTML tags cleanly without destroying
+ * spaces between inline elements or within leaf blocks.
+ */
+export function formatHtml(html) {
+    if (!html || typeof html !== 'string') return '';
+    const clean = cleanSemanticHtml(html);
+    if (!clean) return '';
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<body>${clean}</body>`, 'text/html');
+    const body = doc.body;
+
+    const tab = '  ';
+    const blockContainers = new Set([
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'ul', 'ol', 'blockquote'
+    ]);
+    const leafBlocks = new Set([
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'th', 'td', 'li', 'hr'
+    ]);
+
+    function formatElement(el, level) {
+        const indent = tab.repeat(level);
+        const tag = el.tagName.toLowerCase();
+
+        if (tag === 'hr') {
+            return `${indent}<hr />`;
+        }
+
+        const attrs = Array.from(el.attributes)
+            .map(a => ` ${a.name}="${a.value}"`)
+            .join('');
+
+        if (leafBlocks.has(tag)) {
+            const inner = el.innerHTML.trim();
+            return `${indent}<${tag}${attrs}>${inner}</${tag}>`;
+        }
+
+        if (blockContainers.has(tag)) {
+            const childLines = [];
+            for (let i = 0; i < el.children.length; i++) {
+                const childFormatted = formatElement(el.children[i], level + 1);
+                if (childFormatted) {
+                    childLines.push(childFormatted);
+                }
+            }
+            if (childLines.length === 0) {
+                return `${indent}<${tag}${attrs}></${tag}>`;
+            }
+            return `${indent}<${tag}${attrs}>\n${childLines.join('\n')}\n${indent}</${tag}>`;
+        }
+
+        return `${indent}${el.outerHTML}`;
+    }
+
+    const lines = [];
+    for (let i = 0; i < body.children.length; i++) {
+        const node = body.childNodes[i];
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent?.trim();
+            if (text) {
+                lines.push(`<p>${text}</p>`);
+            }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const formatted = formatElement(node, 0);
+            if (formatted) {
+                lines.push(formatted);
+            }
+        }
+    }
+
+    return lines.join('\n');
+}
+
+export function initDocumentStudios() {
+    const studioElements = document.querySelectorAll('[data-doc-studio]');
+
+    studioElements.forEach((studio) => {
+        if (studio._initialized) return;
+        studio._initialized = true;
+
+        const visualPane = studio.querySelector('.doc-visual-pane');
+        const codePane = studio.querySelector('.doc-code-pane');
+        const tiptapContainer = studio.querySelector('.doc-tiptap-editor');
+        const bubbleMenuEl = studio.querySelector('.doc-bubble-menu');
+        const codeTextarea = studio.querySelector('.doc-code-textarea');
+        const hiddenInput = studio.querySelector('.doc-hidden-input');
+        const modeButtons = studio.querySelectorAll('.doc-mode-btn');
+        const tiptapButtons = studio.querySelectorAll('.doc-tiptap-btn');
+        const bubbleButtons = studio.querySelectorAll('.doc-bubble-btn');
+        const formatBtn = studio.querySelector('.doc-format-btn');
+        const copyBtn = studio.querySelector('.doc-copy-btn');
+        const wordCountSpan = studio.querySelector('.doc-words');
+        const charCountSpan = studio.querySelector('.doc-chars');
+        const panesWrapper = studio.querySelector('.doc-panes-wrapper');
+        const tableControls = studio.querySelectorAll('.doc-table-ctrl');
+
+        const initialContent = hiddenInput ? (hiddenInput.value || '').trim() : '';
+
+        // Initial format on code textarea
+        if (codeTextarea && initialContent) {
+            codeTextarea.value = formatHtml(initialContent);
+        }
+
+        let currentMode = 'visual';
+        let isInternalSync = false;
+        let syncTimeout = null;
+
+        // Counter stats updater
+        const updateStats = (html) => {
+            const temp = document.createElement('div');
+            temp.innerHTML = html || '';
+            const text = (temp.textContent || '').trim();
+            const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+            const chars = text ? text.length : 0;
+
+            if (wordCountSpan) wordCountSpan.textContent = `${words} words`;
+            if (charCountSpan) charCountSpan.textContent = `${chars} chars`;
+        };
+
+        // Toolbar active states updater
+        const updateToolbarState = (ed) => {
+            if (!ed) return;
+
+            tiptapButtons.forEach((btn) => {
+                const action = btn.dataset.tiptapAction;
+                let isActive = false;
+
+                if (action === 'bold') isActive = ed.isActive('bold');
+                else if (action === 'italic') isActive = ed.isActive('italic');
+                else if (action === 'strike') isActive = ed.isActive('strike');
+                else if (action === 'heading-2') isActive = ed.isActive('heading', { level: 2 });
+                else if (action === 'heading-3') isActive = ed.isActive('heading', { level: 3 });
+                else if (action === 'paragraph') isActive = ed.isActive('paragraph');
+                else if (action === 'bullet-list') isActive = ed.isActive('bulletList');
+                else if (action === 'ordered-list') isActive = ed.isActive('orderedList');
+                else if (action === 'blockquote') isActive = ed.isActive('blockquote');
+
+                if (isActive) {
+                    btn.classList.add('bg-background', 'text-primary', 'shadow-xs', 'border-primary/40');
+                    btn.classList.remove('bg-card/60', 'text-muted-foreground');
+                } else {
+                    btn.classList.remove('bg-background', 'text-primary', 'shadow-xs', 'border-primary/40');
+                    btn.classList.add('bg-card/60', 'text-muted-foreground');
+                }
+            });
+
+            // Table buttons state: enable/highlight when cursor is inside a table
+            const isInTable = ed.isActive('table');
+            tableControls.forEach((ctrl) => {
+                if (isInTable) {
+                    ctrl.classList.remove('opacity-50', 'pointer-events-none');
+                } else {
+                    ctrl.classList.add('opacity-50');
+                }
+            });
+        };
+
+        // TipTap Extensions setup
+        const extensions = [
+            StarterKit.configure({
+                heading: {
+                    levels: [2, 3, 4],
+                },
+                link: {
+                    openOnClick: false,
+                    HTMLAttributes: {
+                        class: 'text-primary underline hover:text-brand-green-hover',
+                    },
+                },
+            }),
+            Table.configure({
+                resizable: true,
+            }),
+            TableRow,
+            TableHeader,
+            TableCell,
+        ];
+
+        if (bubbleMenuEl) {
+            extensions.push(
+                BubbleMenu.configure({
+                    element: bubbleMenuEl,
+                })
+            );
+        }
+
+        // Initialize TipTap Editor with cleaned initial content
+        const editor = new Editor({
+            element: tiptapContainer,
+            extensions: extensions,
+            content: cleanSemanticHtml(initialContent) || initialContent,
+            editorProps: {
+                attributes: {
+                    class: 'tiptap ProseMirror doc-rendered-content prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed font-sans focus:outline-none min-h-[380px]',
+                },
+            },
+            onUpdate: ({ editor: ed }) => {
+                if (isInternalSync) return;
+                isInternalSync = true;
+                try {
+                    const rawHtml = ed.getHTML();
+                    const cleanHtml = cleanSemanticHtml(rawHtml);
+
+                    if (hiddenInput) {
+                        hiddenInput.value = cleanHtml;
+                        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
+                    updateStats(cleanHtml);
+
+                    // If in split mode, sync to code textarea (debounced)
+                    if (currentMode === 'split' && codeTextarea) {
+                        clearTimeout(syncTimeout);
+                        syncTimeout = setTimeout(() => {
+                            codeTextarea.value = formatHtml(cleanHtml);
+                        }, 250);
+                    }
+                } finally {
+                    isInternalSync = false;
+                }
+            },
+            onSelectionUpdate: ({ editor: ed }) => {
+                updateToolbarState(ed);
+            },
+        });
+
+        // Initialize Stats
+        updateStats(initialContent);
+        updateToolbarState(editor);
+
+        // Execute TipTap Actions
+        const executeAction = (action) => {
+            if (!editor) return;
+
+            switch (action) {
+                case 'undo':
+                    editor.chain().focus().undo().run();
+                    break;
+                case 'redo':
+                    editor.chain().focus().redo().run();
+                    break;
+                case 'bold':
+                    editor.chain().focus().toggleBold().run();
+                    break;
+                case 'italic':
+                    editor.chain().focus().toggleItalic().run();
+                    break;
+                case 'strike':
+                    editor.chain().focus().toggleStrike().run();
+                    break;
+                case 'heading-2':
+                    editor.chain().focus().toggleHeading({ level: 2 }).run();
+                    break;
+                case 'heading-3':
+                    editor.chain().focus().toggleHeading({ level: 3 }).run();
+                    break;
+                case 'paragraph':
+                    editor.chain().focus().setParagraph().run();
+                    break;
+                case 'bullet-list':
+                    editor.chain().focus().toggleBulletList().run();
+                    break;
+                case 'ordered-list':
+                    editor.chain().focus().toggleOrderedList().run();
+                    break;
+                case 'blockquote':
+                    editor.chain().focus().toggleBlockquote().run();
+                    break;
+                case 'horizontal-rule':
+                    editor.chain().focus().setHorizontalRule().run();
+                    break;
+                case 'insert-table':
+                    editor.chain().focus().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).run();
+                    break;
+                case 'add-row-before':
+                    editor.chain().focus().addRowBefore().run();
+                    break;
+                case 'add-row-after':
+                    editor.chain().focus().addRowAfter().run();
+                    break;
+                case 'delete-row':
+                    editor.chain().focus().deleteRow().run();
+                    break;
+                case 'add-col-before':
+                    editor.chain().focus().addColumnBefore().run();
+                    break;
+                case 'add-col-after':
+                    editor.chain().focus().addColumnAfter().run();
+                    break;
+                case 'delete-col':
+                    editor.chain().focus().deleteColumn().run();
+                    break;
+                case 'merge-split':
+                    editor.chain().focus().mergeOrSplit().run();
+                    break;
+                case 'delete-table':
+                    editor.chain().focus().deleteTable().run();
+                    break;
+                case 'clear-format':
+                    editor.chain().focus().unsetAllMarks().clearNodes().run();
+                    break;
+            }
+        };
+
+        // Main Toolbar button clicks
+        tiptapButtons.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const action = btn.dataset.tiptapAction;
+                if (action) executeAction(action);
+            });
+        });
+
+        // Bubble Menu button clicks
+        bubbleButtons.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const action = btn.dataset.bubbleAction;
+                if (action) executeAction(action);
+            });
+        });
+
+        // Code Editor live typing with two-way sync
+        if (codeTextarea) {
+            codeTextarea.addEventListener('input', () => {
+                if (isInternalSync) return;
+                isInternalSync = true;
+                try {
+                    const val = codeTextarea.value;
+                    const clean = cleanSemanticHtml(val);
+
+                    if (hiddenInput) {
+                        hiddenInput.value = clean;
+                        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
+                    updateStats(clean);
+
+                    clearTimeout(syncTimeout);
+                    syncTimeout = setTimeout(() => {
+                        if (editor) {
+                            editor.commands.setContent(clean, false);
+                        }
+                    }, 300);
+                } finally {
+                    isInternalSync = false;
+                }
+            });
+
+            // Tab key support in code editor
+            codeTextarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = codeTextarea.selectionStart;
+                    const end = codeTextarea.selectionEnd;
+                    const value = codeTextarea.value;
+
+                    codeTextarea.value = value.substring(0, start) + '  ' + value.substring(end);
+                    codeTextarea.selectionStart = codeTextarea.selectionEnd = start + 2;
+                    codeTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        }
+
+        // Mode Switching
+        const setMode = (mode) => {
+            currentMode = mode;
+
+            modeButtons.forEach((btn) => {
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('bg-background', 'text-foreground', 'shadow-sm');
+                    btn.classList.remove('text-muted-foreground');
+                } else {
+                    btn.classList.remove('bg-background', 'text-foreground', 'shadow-sm');
+                    btn.classList.add('text-muted-foreground');
+                }
+            });
+
+            if (mode === 'visual') {
+                panesWrapper.className = 'doc-panes-wrapper relative grid grid-cols-1 w-full min-h-[440px]';
+                visualPane.classList.remove('hidden');
+                codePane.classList.add('hidden');
+                if (editor && hiddenInput) {
+                    editor.commands.setContent(cleanSemanticHtml(hiddenInput.value), false);
+                }
+            } else if (mode === 'code') {
+                panesWrapper.className = 'doc-panes-wrapper relative grid grid-cols-1 w-full min-h-[440px]';
+                visualPane.classList.add('hidden');
+                codePane.classList.remove('hidden');
+                if (codeTextarea) {
+                    codeTextarea.value = formatHtml(hiddenInput ? hiddenInput.value : '');
+                }
+            } else if (mode === 'split') {
+                panesWrapper.className = 'doc-panes-wrapper relative grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/10 w-full min-h-[440px]';
+                visualPane.classList.remove('hidden');
+                codePane.classList.remove('hidden');
+                if (editor && hiddenInput) {
+                    editor.commands.setContent(cleanSemanticHtml(hiddenInput.value), false);
+                }
+                if (codeTextarea) {
+                    codeTextarea.value = formatHtml(hiddenInput ? hiddenInput.value : '');
+                }
+            }
+        };
+
+        modeButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                setMode(btn.dataset.mode);
+            });
+        });
+
+        // Format HTML Action
+        if (formatBtn) {
+            formatBtn.addEventListener('click', () => {
+                const currentVal = hiddenInput ? hiddenInput.value : '';
+                const formatted = formatHtml(currentVal);
+
+                if (codeTextarea) codeTextarea.value = formatted;
+                if (hiddenInput) hiddenInput.value = cleanSemanticHtml(formatted);
+                if (editor) editor.commands.setContent(cleanSemanticHtml(formatted), false);
+
+                updateStats(formatted);
+
+                const originalHtml = formatBtn.innerHTML;
+                formatBtn.innerHTML = `<i class="fa-solid fa-check text-emerald-500 text-[10px]"></i> <span class="hidden sm:inline">Formatted!</span>`;
+                setTimeout(() => {
+                    formatBtn.innerHTML = originalHtml;
+                }, 1500);
+            });
+        }
+
+        // Copy Clean HTML Action
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async () => {
+                const html = cleanSemanticHtml(hiddenInput ? hiddenInput.value : (editor ? editor.getHTML() : ''));
+                try {
+                    await navigator.clipboard.writeText(html);
+                    const originalHtml = copyBtn.innerHTML;
+                    copyBtn.innerHTML = `<i class="fa-solid fa-check text-emerald-500 text-[10px]"></i> <span class="hidden sm:inline">Copied!</span>`;
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalHtml;
+                    }, 1500);
+                } catch (err) {
+                    console.error('Failed to copy', err);
+                }
+            });
+        }
+
+        // Public API for Auto-Translation and external callers
+        const api = {
+            editor: editor,
+            getContent: () => {
+                if (editor) {
+                    return cleanSemanticHtml(editor.getHTML());
+                }
+                return cleanSemanticHtml(hiddenInput ? hiddenInput.value : '');
+            },
+            setContent: (val) => {
+                const clean = cleanSemanticHtml(val);
+                if (editor) {
+                    editor.commands.setContent(clean, false);
+                }
+                if (hiddenInput) hiddenInput.value = clean;
+                if (codeTextarea) codeTextarea.value = formatHtml(clean);
+                updateStats(clean);
+            },
+            format: () => {
+                if (formatBtn) formatBtn.click();
+            },
+            setMode: setMode,
+        };
+
+        studio.docStudio = api;
+        if (hiddenInput) hiddenInput.docStudio = api;
+    });
+}
+
+// Global submit interceptor: ensure hidden inputs are populated with clean HTML from TipTap
+document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (!form || !form.querySelectorAll) return;
+
+    const studios = form.querySelectorAll('[data-doc-studio]');
+    if (studios.length === 0) return;
+
+    studios.forEach((studio) => {
+        const hiddenInput = studio.querySelector('.doc-hidden-input');
+        if (!hiddenInput) return;
+
+        let content = '';
+        if (studio.docStudio) {
+            content = studio.docStudio.getContent();
+        } else {
+            content = hiddenInput.value;
+        }
+
+        hiddenInput.value = cleanSemanticHtml(content);
+    });
+});
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDocumentStudios);
+} else {
+    initDocumentStudios();
+}
+
+window.initDocumentStudios = initDocumentStudios;
+window.cleanSemanticHtml = cleanSemanticHtml;
+window.formatHtml = formatHtml;

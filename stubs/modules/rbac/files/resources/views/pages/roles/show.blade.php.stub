@@ -1,0 +1,140 @@
+@extends('layouts.app')
+
+@section('title', $role->name . ' - ' . statictranslations('Role Detail'))
+@section('page-title', statictranslations('Role Detail'))
+
+@section('content')
+<div class="max-w-screen mx-auto space-y-6">
+
+    {{-- Page Header & Floating Actions --}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-xl md:text-2xl font-serif font-black text-zinc-900 dark:text-white leading-tight">
+                {{ $role->name }}
+            </h1>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                {{ statictranslations('Detailed breakdown of the role\'s system access and metadata.') }}
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{{ route('admin.roles.index') }}" class="btn-secondary py-2 px-4 text-xs">
+                <x-lucide-arrow-left class="w-3.5 h-3.5" />
+                {{ statictranslations('Back to Roles') }}
+            </a>
+            @can('role.update')
+                <a href="{{ route('admin.roles.edit', ['id' => $role->id]) }}" class="btn-gold py-2 px-6 text-xs group relative overflow-hidden">
+                    <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></span>
+                    <span class="relative z-10 flex items-center gap-2">
+                        <x-lucide-edit-3 class="w-3.5 h-3.5" />
+                        {{ statictranslations('Edit Role') }}
+                    </span>
+                </a>
+            @endcan
+        </div>
+    </div>
+
+    {{-- Asymmetrical Bento Grid --}}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {{-- LEFT COLUMN (4/12) - Meta & Icon --}}
+        <div class="lg:col-span-4 space-y-6">
+
+            {{-- Visual Badge Card --}}
+            <div class="lj-card p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(212,175,55,0.08)_0%,_transparent_70%)] pointer-events-none" aria-hidden="true"></div>
+
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 w-full text-left mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-2">
+                    {{ statictranslations('Security Level') }}
+                </h3>
+
+                <div class="relative mb-2">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-lj-wine via-lj-gold to-lj-wine rounded-full blur-lg opacity-40"></div>
+                    <div class="relative w-28 h-28 rounded-full border-2 border-lj-gold/40 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center shadow-xl">
+                        <x-lucide-shield-check class="w-12 h-12 text-lj-gold" />
+                    </div>
+                </div>
+                <h2 class="mt-4 text-lg font-serif font-bold text-zinc-900 dark:text-white">
+                    {{ $role->name }}
+                </h2>
+                <div class="mt-2 inline-flex items-center px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/50 uppercase">
+                    ID: {{ $role->id }}
+                </div>
+            </div>
+
+            {{-- System Records Card --}}
+            <div class="lj-card p-6 relative overflow-hidden">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-5 border-b border-zinc-200/50 dark:border-white/5 pb-2">
+                    {{ statictranslations('System Records') }}
+                </h3>
+
+                <div class="space-y-5 text-sm">
+                    <div>
+                        <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">
+                            <x-lucide-calendar-plus class="w-3.5 h-3.5" /> {{ statictranslations('Date Created') }}
+                        </span>
+                        <span class="font-mono text-zinc-800 dark:text-zinc-200">
+                            {{ $role->created_at?->format('d M Y, H:i') ?? '-' }}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">
+                            <x-lucide-clock class="w-3.5 h-3.5" /> {{ statictranslations('Last Modified') }}
+                        </span>
+                        <span class="font-mono text-zinc-800 dark:text-zinc-200">
+                            {{ $role->updated_at?->format('d M Y, H:i') ?? '-' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- RIGHT COLUMN (8/12) - Active Permissions View --}}
+        <div class="lg:col-span-8">
+            <div class="lj-card p-6 md:p-8 relative overflow-hidden min-h-full">
+                <div class="absolute -top-32 -right-32 w-64 h-64 rounded-full bg-lj-wine/5 blur-3xl pointer-events-none" aria-hidden="true"></div>
+
+                <div class="flex items-center gap-2 mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-3">
+                    <x-lucide-key-round class="w-4 h-4 text-lj-gold" />
+                    <h2 class="text-sm font-serif font-bold text-zinc-900 dark:text-white">
+                        {{ statictranslations('Assigned Permissions') }}
+                    </h2>
+                </div>
+
+                <div class="space-y-8">
+                    @forelse($permissionsGrouped as $group => $groupPerms)
+                        <div>
+                            {{-- Group Label --}}
+                            <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-3 bg-zinc-50 dark:bg-zinc-800/50 inline-block px-3 py-1 rounded-md border border-zinc-200/50 dark:border-white/5">
+                                {{ preg_replace('/(?<!^)[A-Z]/', ' $0', $group) }}
+                            </h4>
+
+                            {{-- Fancy Pill Badges for Permissions --}}
+                            <div class="flex flex-wrap gap-2.5">
+                                @foreach($groupPerms as $perm)
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 border border-zinc-200/80 dark:border-zinc-700/50 shadow-sm transition-all hover:border-lj-gold/50 cursor-default">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-lj-gold"></span>
+                                        {{ preg_replace('/(?<!^)[A-Z]/', ' $0', ucfirst(explode('.', $perm->name)[1] ?? $perm->name)) }}
+                                        <span class="font-mono text-[9px] text-zinc-400 font-normal ml-1 border-l border-zinc-300 dark:border-zinc-600 pl-1.5">
+                                            {{ $perm->name }}
+                                        </span>
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                    @empty
+                        <div class="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl">
+                            <div class="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+                                <x-lucide-shield-alert class="w-6 h-6 text-zinc-400" />
+                            </div>
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white mb-1">{{ statictranslations('No Permissions Assigned') }}</h3>
+                            <p class="text-xs text-zinc-500 max-w-sm">{{ statictranslations('This role currently has no specific system access rights. Users with this role will only access public routes.') }}</p>
+                        </div>
+                    @endforelse
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+@endsection

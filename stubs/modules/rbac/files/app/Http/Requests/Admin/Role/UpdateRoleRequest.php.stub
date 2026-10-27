@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Http\Requests\Admin\Role;
+
+use App\Http\Requests\Admin\AdminRequest;
+use Illuminate\Validation\Rule;
+use Spatie\Permission\Models\Role;
+
+class UpdateRoleRequest extends AdminRequest
+{
+    protected function targetTable(): string
+    {
+        return 'roles';
+    }
+
+    public function authorize(): bool
+    {
+        $admin = $this->adminUser();
+        if (! $admin || ! $admin->can('role.update')) {
+            return false;
+        }
+
+        $id = $this->resolveId();
+        if (! $id) {
+            return true;
+        }
+
+        $role = Role::find($id);
+        if (! $role) {
+            return true;
+        }
+
+        if ($role->name === 'super-admin' && ! $admin->hasRole('super-admin')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function rules(): array
+    {
+        $id = $this->resolveId();
+        $guard = config('admin.guard', 'admin');
+
+        return array_merge($this->idRules(), [
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('roles', 'name')
+                    ->where('guard_name', $guard)
+                    ->ignore($id),
+            ],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['integer', 'exists:permissions,id'],
+        ]);
+    }
+}

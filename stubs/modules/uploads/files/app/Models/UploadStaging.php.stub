@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+#[Table('upload_stagings')]
+#[Fillable([
+    'uuid',
+    'disk',
+    'temp_path',
+    'original_name',
+    'mime_type',
+    'extension',
+    'size',
+    'checksum',
+    'status',
+    'created_by',
+])]
+class UploadStaging extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected function casts(): array
+    {
+        return [
+            'size' => 'integer',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
+
+    /**
+     * Get the user who uploaded the staging file.
+     */
+    public function creator(): BelongsTo
+    {
+        $model = config('auth.providers.admins.model', config('auth.providers.users.model', 'App\Models\User'));
+
+        return $this->belongsTo($model, 'created_by');
+    }
+}

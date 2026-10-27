@@ -1,0 +1,38 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
+
+class AdminPermissionSeeder extends Seeder
+{
+    /** resource => actions. Add your own module resources here. */
+    private array $permissions = [
+        'role' => ['read', 'create', 'update', 'delete'],
+        'user' => ['read', 'create', 'update', 'delete', 'toggle_status'],
+    ];
+
+    public function run(): void
+    {
+        $guard = config('admin.guard', 'admin');
+        $registrar = app(PermissionRegistrar::class);
+        $registrar->forgetCachedPermissions();
+
+        foreach ($this->permissions as $resource => $actions) {
+            foreach ($actions as $action) {
+                Permission::firstOrCreate([
+                    'name' => "{$resource}.{$action}",
+                    'guard_name' => $guard,
+                ]);
+            }
+        }
+
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => $guard]);
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
+
+        $registrar->forgetCachedPermissions();
+    }
+}

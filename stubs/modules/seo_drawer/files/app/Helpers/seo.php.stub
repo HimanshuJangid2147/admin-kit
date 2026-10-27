@@ -1,0 +1,10 @@
+<?php
+
+use App\Services\SeoMetadataService;
+
+if (! function_exists('seo_meta')) {
+    function seo_meta(mixed $input, mixed $description = null): array
+    {
+        return app(SeoMetadataService::class)->generate($input, $description);
+    }
+}

@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class CompleteChunkUploadRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        $profiles = config('uploads.profiles', []);
+        $profileKey = $this->input('profile');
+
+        if ($profileKey && isset($profiles[$profileKey])) {
+            $targetProfile = $profiles[$profileKey];
+            $extensions = $targetProfile['extensions'] ?? [];
+            $maxChunks = $targetProfile['max_chunks'] ?? 200;
+        } else {
+            $extensions = [];
+            $maxChunks = 200;
+            foreach ($profiles as $prof) {
+                $extensions = array_merge($extensions, $prof['extensions'] ?? []);
+                if (isset($prof['max_chunks'])) {
+                    $maxChunks = max($maxChunks, $prof['max_chunks']);
+                }
+            }
+        }
+
+        $extensions = array_unique(array_map('strtolower', $extensions));
+        $extPattern = implode('|', array_map('preg_quote', $extensions));
+
+        return [
+            'upload_uuid' => ['required', 'string', 'uuid'],
+            'total_chunks' => ['required', 'integer', 'min:1', "max:{$maxChunks}"],
+            'original_name' => ['required', 'string', 'max:255', "regex:/\\.({$extPattern})$/i"],
+            'total_size' => ['nullable', 'integer', 'min:0'],
+            'profile' => ['nullable', 'string', 'in:'.implode(',', array_keys($profiles))],
+        ];
+    }
+}

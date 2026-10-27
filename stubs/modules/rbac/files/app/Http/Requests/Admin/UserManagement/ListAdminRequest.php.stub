@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Http\Requests\Admin\UserManagement;
+
+use App\Http\Requests\Admin\AdminRequest;
+
+class ListAdminRequest extends AdminRequest
+{
+    protected function targetTable(): string
+    {
+        return 'admin_users';
+    }
+
+    public function authorize(): bool
+    {
+        return (bool) $this->adminUser()?->can('user.read');
+    }
+
+    public function rules(): array
+    {
+        return [];
+    }
+}

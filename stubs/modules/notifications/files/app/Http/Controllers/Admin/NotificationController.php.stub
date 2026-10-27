@@ -1,0 +1,130 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Repositories\Admin\Interface\AdminNotificationRepositoryInterface as NotificationRepo;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class NotificationController extends Controller
+{
+    public function __construct(protected NotificationRepo $notificationRepo) {}
+
+    /**
+     * Get recent notifications and unread count.
+     */
+    public function index(): JsonResponse
+    {
+        try {
+            $notifications = $this->notificationRepo->getRecentNotifications(20);
+            $unreadCount = $this->notificationRepo->getUnreadCount();
+
+            return response()->json([
+                'success' => true,
+                'unread_count' => $unreadCount,
+                'data' => $notifications,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching admin notifications: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('Failed to load notifications.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark a single notification as read.
+     */
+    public function markAsRead(Request $request): JsonResponse
+    {
+        try {
+            $id = (int) $request->input('id');
+            $this->notificationRepo->markAsRead($id);
+            $unreadCount = $this->notificationRepo->getUnreadCount();
+
+            return response()->json([
+                'success' => true,
+                'unread_count' => $unreadCount,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error marking notification as read: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('Failed to update notification.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark all notifications as read.
+     */
+    public function markAllAsRead(): JsonResponse
+    {
+        try {
+            $this->notificationRepo->markAllAsRead();
+
+            return response()->json([
+                'success' => true,
+                'unread_count' => 0,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error marking all notifications as read: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('Failed to mark all as read.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a single notification.
+     */
+    public function destroy(Request $request): JsonResponse
+    {
+        try {
+            $id = (int) $request->input('id');
+            $this->notificationRepo->removeNotification($id);
+            $unreadCount = $this->notificationRepo->getUnreadCount();
+
+            return response()->json([
+                'success' => true,
+                'unread_count' => $unreadCount,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error deleting notification: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('Failed to delete notification.'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete all notifications.
+     */
+    public function destroyAll(): JsonResponse
+    {
+        try {
+            $this->notificationRepo->removeAllNotifications();
+
+            return response()->json([
+                'success' => true,
+                'unread_count' => 0,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error clearing all notifications: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('Failed to clear notifications.'),
+            ], 500);
+        }
+    }
+}

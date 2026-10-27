@@ -1,0 +1,68 @@
+<?php
+
+namespace App\Repositories\Admin\Repositories;
+
+use App\Models\AdminNotification;
+use App\Repositories\Admin\Interface\AdminNotificationRepositoryInterface;
+
+class AdminNotificationRepository implements AdminNotificationRepositoryInterface
+{
+    public function getRecentNotifications(int $limit = 15)
+    {
+        return AdminNotification::latest('id')->take($limit)->get();
+    }
+
+    public function getUnreadCount(): int
+    {
+        return AdminNotification::where('is_read', false)->count();
+    }
+
+    public function markAsRead(int $id)
+    {
+        $notif = AdminNotification::find($id);
+        if ($notif) {
+            $notif->is_read = true;
+            $notif->save();
+        }
+
+        return $notif;
+    }
+
+    public function markAllAsRead()
+    {
+        return AdminNotification::where('is_read', false)->update(['is_read' => true]);
+    }
+
+    public function removeNotification(int $id)
+    {
+        $notif = AdminNotification::find($id);
+        if ($notif) {
+            $notif->delete();
+        }
+
+        return $notif;
+    }
+
+    public function removeAllNotifications()
+    {
+        return AdminNotification::query()->delete();
+    }
+
+    public function removeByEnquiryId(int $enquiryId)
+    {
+        return AdminNotification::where('data->enquiry_id', $enquiryId)
+            ->orWhere('link', 'like', "%/enquiries/show?id={$enquiryId}")
+            ->orWhere('link', 'like', "%/enquiries/show/{$enquiryId}")
+            ->delete();
+    }
+
+    public function removeByDataKey(string $key, mixed $value)
+    {
+        return AdminNotification::where("data->{$key}", $value)->delete();
+    }
+
+    public function createNotification(array $data)
+    {
+        return AdminNotification::create($data);
+    }
+}

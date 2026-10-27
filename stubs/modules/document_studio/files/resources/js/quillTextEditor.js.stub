@@ -1,0 +1,177 @@
+import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
+import '../css/quill.css'; // Import our separate custom styling overrides
+
+function initQuillEditors() {
+    // Find all textareas/containers that need Quill editor
+    const editors = document.querySelectorAll('[data-quill-editor]');
+    
+    editors.forEach(el => {
+        const textarea = el;
+        // Don't re-initialize if already initialized
+        if (textarea.quill) return;
+
+        if (textarea.tagName === 'TEXTAREA') {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'quill-editor-wrapper flex flex-col w-full';
+
+            const container = document.createElement('div');
+            container.className = 'quill-editor-container';
+            wrapper.appendChild(container);
+            
+            // Insert the wrapper before the textarea
+            textarea.parentNode.insertBefore(wrapper, textarea);
+            
+            // Hide the textarea
+            textarea.classList.add('hidden');
+            
+            // Comprehensive full-featured toolbar with all options including tables
+            const fullToolbarOptions = [
+                [{ 'font': [] }, { 'size': [] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'script': 'sub'}, { 'script': 'super' }],
+                [{ 'header': '1'}, { 'header': '2' }, 'blockquote', 'code-block'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'direction': 'rtl' }, { 'align': [] }],
+                ['link', 'image', 'video', 'formula'],
+                ['table'],
+                ['clean']
+            ];
+            
+            // Initialize Quill with full features and table module support
+            const quill = new Quill(container, {
+                theme: 'snow',
+                modules: {
+                    toolbar: {
+                        container: fullToolbarOptions,
+                        handlers: {
+                            table: function () {
+                                const table = this.quill.getModule('table');
+                                if (table) {
+                                    table.insertTable(3, 3);
+                                }
+                            }
+                        }
+                    },
+                    table: true
+                }
+            });
+            
+            // Load initial content from textarea
+            quill.root.innerHTML = textarea.value ? textarea.value.trim() : '';
+            
+            // Expose the quill instance on the textarea so programmatical updates can sync
+            textarea.quill = quill;
+            
+            // Expose globally
+            if (!window.quillEditors) {
+                window.quillEditors = {};
+            }
+            window.quillEditors[textarea.id] = quill;
+
+            // Dispatch initialization event
+            textarea.dispatchEvent(new CustomEvent('quill:initialized', {
+                bubbles: true,
+                detail: {
+                    id: textarea.id,
+                    quillInstance: quill,
+                    textarea: textarea
+                }
+            }));
+            
+            // Always attach a live character & word counter badge to every Quill editor in the project
+            const maxLength = parseInt(textarea.dataset.maxLength || textarea.getAttribute('maxlength')) || 0;
+            const maxWords = parseInt(textarea.dataset.maxWords) || 0;
+
+            const footer = document.createElement('div');
+            footer.className = 'quill-editor-footer flex items-center justify-between w-full min-h-[1.25rem] mt-1.5 gap-3';
+
+            const errorSlot = document.createElement('div');
+            errorSlot.className = 'quill-error-slot flex-1 min-w-0 flex items-center';
+
+            const counterBadge = document.createElement('div');
+            counterBadge.className = 'quill-counter-badge text-[11px] font-medium text-muted-foreground shrink-0 flex items-center justify-end gap-1.5 transition-colors ml-auto';
+
+            footer.appendChild(errorSlot);
+            footer.appendChild(counterBadge);
+            textarea.parentNode.insertBefore(footer, textarea);
+
+            const updateCounter = () => {
+                const text = quill.getText().replace(/\n$/, ''); // Quill leaves trailing newline
+                const charCount = text ? text.length : 0;
+                const words = text ? text.trim().split(/\s+/).filter(Boolean) : [];
+                const wordCount = words.length;
+
+                let parts = [];
+                let isExceeded = false;
+                let isWarning = false;
+
+                if (maxLength > 0) {
+                    parts.push(`${charCount} / ${maxLength} chars`);
+                    if (charCount > maxLength) {
+                        isExceeded = true;
+                    } else if (charCount >= maxLength * 0.85) {
+                        isWarning = true;
+                    }
+                } else {
+                    parts.push(`${charCount} chars`);
+                }
+
+                if (maxWords > 0) {
+                    parts.push(`${wordCount} / ${maxWords} words`);
+                    if (wordCount > maxWords) {
+                        isExceeded = true;
+                    } else if (wordCount >= maxWords * 0.85) {
+                        isWarning = true;
+                    }
+                } else if (maxLength === 0) {
+                    parts.push(`${wordCount} words`);
+                }
+
+                if (isExceeded) {
+                    counterBadge.className = 'quill-counter-badge text-[11px] font-bold text-red-500 shrink-0 flex items-center justify-end gap-1.5 ml-auto';
+                    counterBadge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> <span>${parts.join(' • ')} (Limit Exceeded)</span>`;
+                    wrapper.classList.add('is-invalid');
+                } else if (isWarning) {
+                    counterBadge.className = 'quill-counter-badge text-[11px] font-semibold text-amber-500 shrink-0 flex items-center justify-end gap-1.5 ml-auto';
+                    counterBadge.innerHTML = `<span>${parts.join(' • ')}</span>`;
+                } else {
+                    counterBadge.className = 'quill-counter-badge text-[11px] font-medium text-muted-foreground shrink-0 flex items-center justify-end gap-1.5 ml-auto';
+                    counterBadge.innerHTML = `<span>${parts.join(' • ')}</span>`;
+                }
+            };
+
+            updateCounter();
+
+            quill.on('text-change', () => {
+                const html = quill.root.innerHTML;
+                const cleanVal = (html === '<p><br></p>' || html === '<p></p>') ? '' : html.trim();
+                textarea.value = cleanVal;
+                updateCounter();
+
+                if (cleanVal || quill.getText().trim()) {
+                    wrapper.classList.remove('is-invalid', '!border-destructive');
+                    const toolbar = wrapper.querySelector('.ql-toolbar');
+                    const qlContainer = wrapper.querySelector('.ql-container');
+                    toolbar?.classList.remove('is-invalid', '!border-destructive', '!border-red-500');
+                    qlContainer?.classList.remove('is-invalid', '!border-destructive', '!border-red-500');
+
+                    errorSlot.innerHTML = '';
+                    const parent = textarea.closest('.flex-col') || textarea.parentNode;
+                    const fieldError = parent?.querySelector('.field-error-msg');
+                    if (fieldError) fieldError.remove();
+                }
+            });
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initQuillEditors);
+} else {
+    initQuillEditors();
+}
+
+window.initQuillEditors = initQuillEditors;
+

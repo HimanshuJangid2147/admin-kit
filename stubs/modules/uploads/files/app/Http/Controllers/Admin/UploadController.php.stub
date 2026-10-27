@@ -1,0 +1,138 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ChunkUploadRequest;
+use App\Http\Requests\Admin\CompleteChunkUploadRequest;
+use App\Http\Requests\Admin\DirectUploadRequest;
+use App\Services\UploadStagingService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+
+class UploadController extends Controller
+{
+    public function __construct(
+        protected UploadStagingService $stagingService
+    ) {}
+
+    /**
+     * Handle direct file upload payload (< 2MB).
+     */
+    public function directUpload(DirectUploadRequest $request): JsonResponse
+    {
+        try {
+            Log::info('Direct upload initiated', ['original_name' => $request->file('file')->getClientOriginalName()]);
+
+            $file = $request->file('file');
+            $profile = $request->input('profile', 'image');
+            $staging = $this->stagingService->storeDirect($file, $profile);
+
+            Log::info('Direct upload successful: '.$staging->uuid, ['original_name' => $staging->original_name]);
+
+            return response()->json([
+                'success' => true,
+                'uuid' => $staging->uuid,
+                'original_name' => $staging->original_name,
+                'status' => $staging->status,
+                'temp_path' => $staging->temp_path,
+            ], 201);
+        } catch (HttpException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->getStatusCode());
+        } catch (\Throwable $e) {
+            Log::error('Direct upload failed: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json(['success' => false, 'message' => statictranslations('Upload failed. Please try again.')], 500);
+        }
+    }
+
+    /**
+     * Handle single chunk slice upload.
+     */
+    public function chunkUpload(ChunkUploadRequest $request): JsonResponse
+    {
+        try {
+            $chunk = $request->file('file_chunk');
+            $uuid = $request->input('upload_uuid');
+            $index = (int) $request->input('chunk_index');
+            $total = (int) $request->input('total_chunks');
+            $name = $request->input('original_name');
+            $profile = $request->input('profile', 'image');
+
+            Log::info('Chunk upload initiated', ['original_name' => $request->input('original_name')]);
+
+            $staging = $this->stagingService->storeChunkSlice($chunk, $uuid, $index, $total, $name, $profile);
+
+            Log::info('Chunk upload successful: '.$staging->uuid, ['original_name' => $staging->original_name]);
+
+            return response()->json([
+                'success' => true,
+                'uuid' => $staging->uuid,
+                'chunk_index' => $index,
+                'status' => 'uploading',
+            ], 200);
+        } catch (HttpException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->getStatusCode());
+        } catch (\Throwable $e) {
+            Log::error('Chunk upload failed: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json(['success' => false, 'message' => statictranslations('Chunk upload failed.')], 500);
+        }
+    }
+
+    /**
+     * Handle chunk upload merge completion.
+     */
+    public function completeChunkUpload(CompleteChunkUploadRequest $request): JsonResponse
+    {
+        try {
+            $uuid = $request->input('upload_uuid');
+            $total = (int) $request->input('total_chunks');
+            $name = $request->input('original_name');
+            $size = (int) $request->input('total_size', 0);
+            $profile = $request->input('profile', 'image');
+
+            Log::info('Complete chunk upload initiated', ['original_name' => $request->input('original_name')]);
+
+            $staging = $this->stagingService->completeChunkUpload($uuid, $total, $name, $size, $profile);
+
+            Log::info('Complete chunk upload successful: '.$staging->uuid, ['original_name' => $staging->original_name]);
+
+            return response()->json([
+                'success' => true,
+                'uuid' => $staging->uuid,
+                'original_name' => $staging->original_name,
+                'status' => $staging->status,
+                'temp_path' => $staging->temp_path,
+                'checksum' => $staging->checksum,
+            ], 200);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (HttpException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->getStatusCode());
+        } catch (\Throwable $e) {
+            Log::error('Complete chunk upload failed: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json(['success' => false, 'message' => statictranslations('Upload completion failed.')], 500);
+        }
+    }
+
+    /**
+     * Cancel an in-progress or completed staged upload.
+     */
+    public function cancelUpload(string $uuid): JsonResponse
+    {
+        try {
+            $this->stagingService->cancelUpload($uuid);
+
+            return response()->json(['success' => true, 'message' => statictranslations('Upload cancelled successfully.')]);
+        } catch (HttpException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->getStatusCode());
+        } catch (\Throwable $e) {
+            Log::error('Cancel upload failed: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json(['success' => false, 'message' => statictranslations('Failed to cancel upload.')], 500);
+        }
+    }
+}

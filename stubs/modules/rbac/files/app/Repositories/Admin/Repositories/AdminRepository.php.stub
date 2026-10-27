@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Repositories\Admin\Repositories;
+
+use App\Models\Admin;
+use App\Repositories\Admin\Interface\AdminRepositoryInterface;
+use Illuminate\Database\Eloquent\Builder;
+
+class AdminRepository implements AdminRepositoryInterface
+{
+    public function findById(int $id): ?Admin
+    {
+        $query = Admin::with('roles');
+
+        if (method_exists(Admin::class, 'countries')) {
+            $query->with('countries');
+        }
+
+        return $query->find($id);
+    }
+
+    public function findByEmail(string $email): ?Admin
+    {
+        return Admin::where('email', $email)->first();
+    }
+
+    public function findByUsername(string $username): ?Admin
+    {
+        return Admin::where('username', $username)->first();
+    }
+
+    public function create(array $data): Admin
+    {
+        return Admin::create($data);
+    }
+
+    public function update(Admin $admin, array $data): bool
+    {
+        return $admin->update($data);
+    }
+
+    public function delete(Admin $admin): bool
+    {
+        return (bool) $admin->delete();
+    }
+
+    public function getDataTable(array $filters = []): Builder
+    {
+        $query = Admin::query()->with('roles');
+
+        if (method_exists(Admin::class, 'countries')) {
+            $query->with('countries');
+        }
+
+        $searchValue = null;
+        if (isset($filters['search'])) {
+            $searchValue = is_array($filters['search'])
+                ? ($filters['search']['value'] ?? null)
+                : $filters['search'];
+        }
+
+        if (! empty($searchValue)) {
+            $query->where(function ($q) use ($searchValue) {
+                $q->where('name', 'like', "%{$searchValue}%")
+                    ->orWhere('email', 'like', "%{$searchValue}%")
+                    ->orWhere('username', 'like', "%{$searchValue}%");
+            });
+        }
+
+        return $query->latest();
+    }
+}

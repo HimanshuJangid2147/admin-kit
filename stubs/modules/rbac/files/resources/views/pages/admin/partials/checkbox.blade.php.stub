@@ -1,0 +1,8 @@
+<div class="flex items-center justify-center">
+    <input
+        type="checkbox"
+        name="ids[]"
+        value="{{ $id }}"
+        class="w-4 h-4 rounded-md border border-zinc-300 dark:border-white/[0.08] bg-zinc-50 dark:bg-zinc-900/50 text-lj-wine dark:text-lj-gold focus:ring-1 focus:ring-offset-0 focus:ring-lj-wine/30 dark:focus:ring-lj-gold/30 cursor-pointer transition-all duration-200 hover:border-lj-wine/50 dark:hover:border-lj-gold/50"
+    >
+</div>

@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Repositories\Admin\Interface;
+
+interface AdminNotificationRepositoryInterface
+{
+    public function getRecentNotifications(int $limit = 15);
+
+    public function getUnreadCount(): int;
+
+    public function markAsRead(int $id);
+
+    public function markAllAsRead();
+
+    public function removeNotification(int $id);
+
+    public function removeAllNotifications();
+
+    public function removeByEnquiryId(int $enquiryId);
+
+    public function removeByDataKey(string $key, mixed $value);
+
+    public function createNotification(array $data);
+}

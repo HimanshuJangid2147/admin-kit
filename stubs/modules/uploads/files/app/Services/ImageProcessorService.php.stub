@@ -1,0 +1,97 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+
+class ImageProcessorService
+{
+    /**
+     * Downscale images to maximum side dimension using Intervention Image v4.
+     * Converts to WebP by default for optimal compression.
+     */
+    public function processImage(string $filePath, int $maxDimension = 1920, bool $convertToWebp = true): array
+    {
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mime = File::mimeType($filePath) ?: 'application/octet-stream';
+
+        // Skip animated GIFs
+        if ($mime === 'image/gif') {
+            return [
+                'processed' => false,
+                'path' => $filePath,
+                'mime' => $mime,
+                'extension' => $extension,
+                'size' => File::size($filePath),
+            ];
+        }
+
+        if (! class_exists('Intervention\Image\Laravel\Facades\Image')) {
+            return [
+                'processed' => false,
+                'path' => $filePath,
+                'mime' => $mime,
+                'extension' => $extension,
+                'size' => File::size($filePath),
+            ];
+        }
+
+        try {
+            $imageClass = 'Intervention\Image\Laravel\Facades\Image';
+            $image = $imageClass::decodePath($filePath);
+
+            $image->scaleDown(width: $maxDimension, height: $maxDimension);
+
+            $targetPath = $filePath;
+            $targetExtension = $extension;
+            $targetMime = $mime;
+
+            if ($convertToWebp && class_exists('Intervention\Image\Encoders\WebpEncoder')) {
+                $dir = dirname($filePath);
+                $filename = pathinfo($filePath, PATHINFO_FILENAME);
+                $targetPath = "{$dir}/{$filename}.webp";
+
+                $encoded = $image->encode(new \Intervention\Image\Encoders\WebpEncoder(quality: 78));
+                $encoded->save($targetPath);
+
+                if ($targetPath !== $filePath && File::exists($filePath)) {
+                    File::delete($filePath);
+                }
+                $targetExtension = 'webp';
+                $targetMime = 'image/webp';
+            } else {
+                $encoded = match ($mime) {
+                    'image/jpeg' => class_exists('Intervention\Image\Encoders\JpegEncoder') ? $image->encode(new \Intervention\Image\Encoders\JpegEncoder(quality: 80)) : $image->encode(),
+                    'image/png' => class_exists('Intervention\Image\Encoders\PngEncoder') ? $image->encode(new \Intervention\Image\Encoders\PngEncoder()) : $image->encode(),
+                    default => $image->encode(),
+                };
+                $encoded->save($targetPath);
+            }
+
+            Log::info('Image processed successfully', [
+                'original' => basename($filePath),
+                'result' => basename($targetPath),
+                'size' => File::size($targetPath),
+            ]);
+
+            return [
+                'processed' => true,
+                'path' => $targetPath,
+                'mime' => $targetMime,
+                'extension' => $targetExtension,
+                'size' => File::size($targetPath),
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Image processing failed, returning original: '.$e->getMessage());
+
+            return [
+                'processed' => false,
+                'path' => $filePath,
+                'mime' => $mime,
+                'extension' => $extension,
+                'size' => File::size($filePath),
+            ];
+        }
+    }
+}

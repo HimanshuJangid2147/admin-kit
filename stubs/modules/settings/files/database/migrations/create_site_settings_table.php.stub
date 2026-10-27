@@ -1,0 +1,47 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('site_settings', function (Blueprint $table) {
+            $table->id();
+            $table->json('site_quote')->nullable();
+            $table->string('address')->nullable();
+            $table->string('std_code')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('email')->nullable();
+            $table->string('facebook_link')->nullable();
+            $table->string('instagram_link')->nullable();
+            $table->string('linkedin_link')->nullable();
+            $table->json('pdf_one_name')->nullable();
+            $table->string('pdf_one')->nullable();
+            $table->string('pdf_one_image')->nullable();
+            $table->json('pdf_two_name')->nullable();
+            $table->string('pdf_two')->nullable();
+            $table->string('pdf_two_image')->nullable();
+            $table->boolean('maintenance_mode')->default(false);
+            $table->json('meta_title')->nullable();
+            $table->json('meta_description')->nullable();
+            $table->string('meta_image')->nullable();
+            $table->string('notification_sound')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('site_settings');
+    }
+};

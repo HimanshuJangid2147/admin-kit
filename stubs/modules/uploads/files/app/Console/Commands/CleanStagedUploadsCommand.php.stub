@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
+
+class CleanStagedUploadsCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'uploads:clean
+                            {--hours=24 : Purge completed, committed, or failed uploads older than specified hours}
+                            {--now : Purge all completed, committed, or failed uploads immediately}
+                            {--dry-run : Show what would be deleted but do not delete anything}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Clean up completed, committed, or failed temporary staged upload files older than 24 hours';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle(): int
+    {
+        $purgedCount = 0;
+        $dryRun = (bool) $this->option('dry-run');
+        $hours = (int) $this->option('hours');
+
+        // Check if UploadStaging service/repository is bound in container
+        $stagingRepoClass = 'App\\Repositories\\Admin\\Interface\\UploadStagingRepositoryInterface';
+        $chunkServiceClass = 'App\\Services\\ChunkService';
+
+        if (interface_exists($stagingRepoClass) && app()->bound($stagingRepoClass)) {
+            $stagingRepo = app($stagingRepoClass);
+            $chunkService = app()->bound($chunkServiceClass) ? app($chunkServiceClass) : null;
+
+            if ($this->option('now')) {
+                $staleUploads = $stagingRepo->getAllStagingUploads();
+                $this->info("'--now' set: found {$staleUploads->count()} staged upload(s) to purge.");
+            } else {
+                $staleUploads = $stagingRepo->getStaleStagingUploads($hours);
+                $this->info("Found {$staleUploads->count()} stale staged upload(s) older than {$hours} hours.");
+            }
+
+            if ($dryRun) {
+                $this->info('Dry-run enabled: no files or records will be deleted. Listing targets:');
+            }
+
+            foreach ($staleUploads as $upload) {
+                $fullPath = storage_path("app/{$upload->temp_path}");
+
+                if ($dryRun) {
+                    $this->line("- {$upload->uuid} -> {$upload->temp_path} (exists: ".(File::exists($fullPath) ? 'yes' : 'no').')');
+                    $purgedCount++;
+
+                    continue;
+                }
+
+                if (File::exists($fullPath)) {
+                    File::delete($fullPath);
+                }
+
+                if ($chunkService && method_exists($chunkService, 'deleteChunkSlices')) {
+                    $chunkService->deleteChunkSlices($upload->uuid);
+                }
+
+                $stagingRepo->deleteByUuid($upload->uuid);
+                $purgedCount++;
+            }
+        } else {
+            // Standalone filesystem cleanup fallback when UploadStaging repository is not yet bound
+            $tempDir = storage_path('app/uploads/temp');
+            if (File::isDirectory($tempDir)) {
+                $files = File::files($tempDir);
+                $now = time();
+                $cutoff = $now - ($hours * 3600);
+
+                if ($dryRun) {
+                    $this->info('Dry-run enabled (filesystem fallback): no files will be deleted. Listing targets:');
+                }
+
+                foreach ($files as $file) {
+                    $isStale = $this->option('now') || ($file->getMTime() <= $cutoff);
+                    if ($isStale) {
+                        if ($dryRun) {
+                            $this->line("- {$file->getFilename()} (size: {$file->getSize()} bytes)");
+                        } else {
+                            File::delete($file->getPathname());
+                        }
+                        $purgedCount++;
+                    }
+                }
+            } else {
+                $this->info('No staged temporary directory found at storage/app/uploads/temp. Nothing to purge.');
+            }
+        }
+
+        $this->info("Successfully purged {$purgedCount} staged upload(s).".($dryRun ? ' (dry-run)' : ''));
+
+        return Command::SUCCESS;
+    }
+}

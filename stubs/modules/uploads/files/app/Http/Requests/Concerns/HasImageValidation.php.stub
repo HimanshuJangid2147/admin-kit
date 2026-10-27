@@ -1,0 +1,84 @@
+<?php
+
+namespace App\Http\Requests\Concerns;
+
+use Closure;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Validator;
+
+/**
+ * Provides standardized image validation rule strings for all Admin Request classes.
+ */
+trait HasImageValidation
+{
+    /**
+     * High-quality image rule - 5MB limit.
+     */
+    protected const IMAGE_HIGH = 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:5120';
+
+    /**
+     * Standard image rule - 2MB limit.
+     */
+    protected const IMAGE_STANDARD = 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048';
+
+    /**
+     * Rule closure supporting both direct UploadedFile and staged UUID string (nullable).
+     */
+    protected function imageOrStagedUuid(string $rule = self::IMAGE_STANDARD): array
+    {
+        return ['nullable', $this->imageOrUuidClosure($rule)];
+    }
+
+    /**
+     * Rule closure supporting both direct UploadedFile and staged UUID string (required).
+     */
+    protected function requiredImageOrStagedUuid(string $rule = self::IMAGE_STANDARD): array
+    {
+        return ['required', $this->imageOrUuidClosure($rule)];
+    }
+
+    /**
+     * Shared closure that validates UploadedFile or passes staged UUID strings.
+     */
+    private function imageOrUuidClosure(string $rule): Closure
+    {
+        return function ($attribute, $value, $fail) use ($rule) {
+            if (is_string($value)) {
+                return; // Staged upload UUID string
+            }
+            if ($value instanceof UploadedFile) {
+                $validator = Validator::make(
+                    [$attribute => $value],
+                    [$attribute => $rule]
+                );
+                if ($validator->fails()) {
+                    $fail($validator->errors()->first($attribute));
+                }
+            }
+        };
+    }
+
+    /**
+     * Shared mimes message used in messages() methods.
+     */
+    protected function imageMimesMessage(): string
+    {
+        return statictranslations('Allowed formats: jpeg, png, jpg, gif, svg, webp.');
+    }
+
+    /**
+     * Shared max message for HIGH (5MB) images.
+     */
+    protected function imageHighMaxMessage(): string
+    {
+        return statictranslations('The image may not be greater than 5MB.');
+    }
+
+    /**
+     * Shared max message for STANDARD (2MB) images.
+     */
+    protected function imageStandardMaxMessage(): string
+    {
+        return statictranslations('The image may not be greater than 2MB.');
+    }
+}

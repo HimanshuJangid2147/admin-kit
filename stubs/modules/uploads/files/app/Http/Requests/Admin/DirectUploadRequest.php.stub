@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use App\Http\Requests\Concerns\HasImageValidation;
+use Illuminate\Foundation\Http\FormRequest;
+
+class DirectUploadRequest extends FormRequest
+{
+    use HasImageValidation;
+
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        $profile = $this->input('profile', 'image');
+        if ($profile === 'document') {
+            return [
+                'file' => ['required', 'file', 'mimes:pdf', 'max:25600'],
+                'profile' => ['nullable', 'string'],
+            ];
+        }
+
+        return [
+            'file' => $this->requiredImageOrStagedUuid(self::IMAGE_HIGH),
+            'profile' => ['nullable', 'string'],
+        ];
+    }
+}

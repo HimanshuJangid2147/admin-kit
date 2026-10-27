@@ -1,0 +1,226 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Role\DeleteRoleRequest;
+use App\Http\Requests\Admin\Role\EditRoleRequest;
+use App\Http\Requests\Admin\Role\ListRoleRequest;
+use App\Http\Requests\Admin\Role\ReadRoleRequest;
+use App\Http\Requests\Admin\Role\StoreRoleRequest;
+use App\Http\Requests\Admin\Role\UpdateRoleRequest;
+use App\Repositories\Admin\Interface\PermissionRepositoryInterface as PermissionRepo;
+use App\Repositories\Admin\Interface\RoleRepositoryInterface as RoleRepo;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
+use Throwable;
+use Yajra\DataTables\Facades\DataTables;
+
+class RoleController extends Controller
+{
+    public function index(): View
+    {
+        return view('pages.roles.index');
+    }
+
+    public function create(PermissionRepo $permissionRepository): View
+    {
+        $permissionsGrouped = $permissionRepository->getAllGroupedByPrefix();
+
+        return view('pages.roles.create', compact('permissionsGrouped'));
+    }
+
+    public function store(StoreRoleRequest $request, RoleRepo $roleRepository): RedirectResponse
+    {
+        try {
+            $data = $request->validated();
+            $data['guard_name'] = config('admin.guard', 'admin');
+            $data['permissions'] = $request->input('permissions', []);
+
+            $roleRepository->create($data);
+
+            return redirect()->route('admin.roles.index')->with(
+                'success',
+                function_exists('statictranslations') ? statictranslations('Role created successfully.') : __('Role created successfully.')
+            );
+        } catch (Throwable $e) {
+            Log::error('Role creation failed.', ['exception' => $e]);
+
+            return back()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to create role. Please try again later.') : __('Unable to create role. Please try again later.')
+            );
+        }
+    }
+
+    public function edit(EditRoleRequest $request, RoleRepo $roleRepository, PermissionRepo $permissionRepository): View|RedirectResponse
+    {
+        try {
+            $id = $request->resolveId();
+            $role = $roleRepository->getByGuard(config('admin.guard', 'admin'))->where('id', $id)->first();
+
+            if (! $role) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Role not found.') : __('Role not found.')
+                );
+            }
+
+            if ($role->name === 'super-admin' && ! auth(config('admin.guard', 'admin'))->user()->hasRole('super-admin')) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Unauthorized to modify the super-admin role.') : __('Unauthorized to modify the super-admin role.')
+                );
+            }
+
+            $permissionsGrouped = $permissionRepository->getAllGroupedByPrefix();
+
+            return view('pages.roles.edit', compact('role', 'permissionsGrouped'));
+        } catch (Throwable $e) {
+            Log::error('Role edit retrieval failed.', ['exception' => $e]);
+
+            return back()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to load role. Please try again later.') : __('Unable to load role. Please try again later.')
+            );
+        }
+    }
+
+    public function update(UpdateRoleRequest $request, RoleRepo $roleRepository): RedirectResponse
+    {
+        try {
+            $data = $request->validated();
+            $id = $request->resolveId();
+            unset($data['id']);
+
+            $role = $roleRepository->getByGuard(config('admin.guard', 'admin'))->where('id', $id)->first();
+            if (! $role) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Role not found.') : __('Role not found.')
+                );
+            }
+
+            if ($role->name === 'super-admin' && ! auth(config('admin.guard', 'admin'))->user()->hasRole('super-admin')) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Unauthorized to modify the super-admin role.') : __('Unauthorized to modify the super-admin role.')
+                );
+            }
+
+            $data['permissions'] = $request->input('permissions', []);
+            $roleRepository->update($id, $data);
+
+            return redirect()->route('admin.roles.index')->with(
+                'success',
+                function_exists('statictranslations') ? statictranslations('Role updated successfully.') : __('Role updated successfully.')
+            );
+        } catch (Throwable $e) {
+            Log::error('Role update failed.', ['exception' => $e]);
+
+            return back()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to update role. Please try again later.') : __('Unable to update role. Please try again later.')
+            );
+        }
+    }
+
+    public function destroy(DeleteRoleRequest $request, RoleRepo $roleRepository): JsonResponse
+    {
+        try {
+            $id = $request->resolveId();
+            $role = $roleRepository->getByGuard(config('admin.guard', 'admin'))->where('id', $id)->first();
+
+            if ($role && $role->name === 'super-admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => function_exists('statictranslations') ? statictranslations('Unauthorized to modify the super-admin role.') : __('Unauthorized to modify the super-admin role.'),
+                ], 403);
+            }
+
+            $roleRepository->delete($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => function_exists('statictranslations') ? statictranslations('Role deleted successfully.') : __('Role deleted successfully.'),
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Role deletion failed.', ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => function_exists('statictranslations') ? statictranslations('Unable to delete role. Please try again later.') : __('Unable to delete role. Please try again later.'),
+            ], 500);
+        }
+    }
+
+    public function show(ReadRoleRequest $request, RoleRepo $roleRepository, PermissionRepo $permissionRepository): View|RedirectResponse
+    {
+        try {
+            $id = $request->resolveId();
+            $role = $roleRepository->getByGuard(config('admin.guard', 'admin'))->where('id', $id)->first();
+
+            if (! $role) {
+                return back()->withErrors(
+                    function_exists('statictranslations') ? statictranslations('Role not found.') : __('Role not found.')
+                );
+            }
+
+            $permissionsGrouped = $permissionRepository->getGroupedByPrefixForRole($role);
+
+            return view('pages.roles.show', compact('role', 'permissionsGrouped'));
+        } catch (Throwable $e) {
+            Log::error('Role view retrieval failed.', ['exception' => $e]);
+
+            return back()->withErrors(
+                function_exists('statictranslations') ? statictranslations('Unable to load role. Please try again later.') : __('Unable to load role. Please try again later.')
+            );
+        }
+    }
+
+    public function getRolesList(Request $request, RoleRepo $roleRepository): JsonResponse
+    {
+        $term = trim((string) $request->input('q', $request->input('term', '')));
+        $roles = $roleRepository->getRolesList($term);
+        $roleList = [];
+
+        foreach ($roles as $role) {
+            $roleList[] = [
+                'id' => $role->id,
+                'text' => $role->name,
+            ];
+        }
+
+        return response()->json(['results' => $roleList]);
+    }
+
+    public function dataTable(ListRoleRequest $request, RoleRepo $roleRepository): JsonResponse
+    {
+        try {
+            $builder = $roleRepository->datatable($request->all());
+
+            return DataTables::of($builder)
+                ->addIndexColumn()
+                ->addColumn('name', fn ($role) => $role->name)
+                ->addColumn('permissions', fn ($role) => view('partials.datatable-permissionsList', ['permissions' => $role->permissions])->render())
+                ->addColumn('actions', function ($role) use ($request) {
+                    $isSuperAdminRole = $role->name === 'super-admin';
+                    $currentUserIsSuperAdmin = (bool) $request->user()?->hasRole('super-admin');
+
+                    return view('partials.datatable-actions', [
+                        'id' => $role->id,
+                        'view_url' => $request->user()?->can('role.read') ? route('admin.roles.show', ['id' => $role->id]) : null,
+                        'edit_url' => ($request->user()?->can('role.update') && (! $isSuperAdminRole || $currentUserIsSuperAdmin)) ? route('admin.roles.edit', ['id' => $role->id]) : null,
+                        'delete_url' => ($request->user()?->can('role.delete') && (! $isSuperAdminRole || $currentUserIsSuperAdmin)) ? route('admin.roles.delete', ['id' => $role->id]) : null,
+                        'resource' => function_exists('statictranslations') ? statictranslations('Role') : __('Role'),
+                        'label' => $role->name,
+                    ])->render();
+                })
+                ->rawColumns(['actions', 'permissions'])
+                ->make(true);
+        } catch (Throwable $e) {
+            Log::error('Error fetching roles for datatable.', ['exception' => $e]);
+
+            return response()->json([
+                'data' => [],
+                'message' => function_exists('statictranslations') ? statictranslations('Unable to fetch roles. Please try again later.') : __('Unable to fetch roles. Please try again later.'),
+            ], 500);
+        }
+    }
+}

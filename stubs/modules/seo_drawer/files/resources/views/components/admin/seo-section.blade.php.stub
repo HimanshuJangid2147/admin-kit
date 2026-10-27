@@ -1,0 +1,16 @@
+@props([
+    'model' => null,
+    'prefix' => '',
+    'slug' => '',
+    'defaultTitle' => '',
+    'defaultDescription' => '',
+])
+
+{{-- Backwards-compatible shim forwarding to Slide-Over SEO Drawer --}}
+<x-admin.seo-drawer
+    :model="$model"
+    :prefix="$prefix"
+    :slug="$slug"
+    :default-title="$defaultTitle"
+    :default-description="$defaultDescription"
+/>

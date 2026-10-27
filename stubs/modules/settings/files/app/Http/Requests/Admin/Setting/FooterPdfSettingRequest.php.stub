@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Http\Requests\Admin\Setting;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class FooterPdfSettingRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'pdf_one_name' => 'nullable|array',
+            'pdf_one_name.en' => 'nullable|string|max:255',
+            'pdf_one_name.*' => 'nullable|string|max:255',
+            'pdf_one' => 'nullable',
+            'pdf_one_image' => 'nullable',
+            'pdf_two_name' => 'nullable|array',
+            'pdf_two_name.en' => 'nullable|string|max:255',
+            'pdf_two_name.*' => 'nullable|string|max:255',
+            'pdf_two' => 'nullable',
+            'pdf_two_image' => 'nullable',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'pdf_one_name.array' => statictranslations('The PDF 1 title must be an array.'),
+            'pdf_one_name.en.max' => statictranslations('The English PDF 1 title may not be greater than 255 characters.'),
+            'pdf_one.file' => statictranslations('The PDF 1 brochure file must be a valid file.'),
+            'pdf_one.mimes' => statictranslations('The PDF 1 brochure file must be a PDF document.'),
+            'pdf_one.max' => statictranslations('The PDF 1 brochure file may not be larger than 25MB.'),
+            'pdf_two_name.array' => statictranslations('The PDF 2 title must be an array.'),
+            'pdf_two_name.en.max' => statictranslations('The English PDF 2 title may not be greater than 255 characters.'),
+            'pdf_two.file' => statictranslations('The PDF 2 secondary document must be a valid file.'),
+            'pdf_two.mimes' => statictranslations('The PDF 2 secondary document must be a PDF document.'),
+            'pdf_two.max' => statictranslations('The PDF 2 secondary document may not be larger than 25MB.'),
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors.
+     */
+    public function attributes(): array
+    {
+        return [
+            'pdf_one_name' => statictranslations('PDF 1 Title'),
+            'pdf_one_name.en' => statictranslations('PDF 1 title (English)'),
+            'pdf_one_name.ru' => statictranslations('PDF 1 title (Russian)'),
+            'pdf_one_name.kk' => statictranslations('PDF 1 title (Kazakh)'),
+            'pdf_two_name' => statictranslations('PDF 2 Title'),
+            'pdf_two_name.en' => statictranslations('PDF 2 title (English)'),
+            'pdf_two_name.ru' => statictranslations('PDF 2 title (Russian)'),
+            'pdf_two_name.kk' => statictranslations('PDF 2 title (Kazakh)'),
+        ];
+    }
+}

@@ -1,0 +1,243 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+
+class SeoMetadataService
+{
+    protected ?TranslationService $translationService;
+
+    public function __construct(?TranslationService $translationService = null)
+    {
+        $this->translationService = $translationService;
+    }
+
+    protected function getTranslationService(): ?TranslationService
+    {
+        if ($this->translationService === null && function_exists('app')) {
+            try {
+                $this->translationService = app(TranslationService::class);
+            } catch (\Throwable $e) {
+                // container or binding not available
+            }
+        }
+
+        return $this->translationService;
+    }
+
+    /**
+     * Generate SEO metadata.
+     *
+     * @param  mixed  $input  Can be an Eloquent Model, an array, or a string (representing the title).
+     * @param  mixed  $description  Can be a string/array representing description, or null.
+     */
+    public function generate(mixed $input, mixed $description = null): array
+    {
+        $titleData = null;
+        $descriptionData = null;
+
+        if ($input instanceof Model) {
+            [$titleData, $descriptionData] = $this->extractFromModel($input);
+        } elseif (is_array($input)) {
+            [$titleData, $descriptionData] = $this->extractFromArray($input, $description);
+        } else {
+            $titleData = $input;
+            $descriptionData = $description;
+        }
+
+        // Auto-translation logic if TranslationService is available
+        $translationService = $this->getTranslationService();
+        if ($translationService) {
+            $defaultLocale = 'en';
+            $supportedLocales = ['en', 'ru', 'kk'];
+            try {
+                if (function_exists('config')) {
+                    $defaultLocale = config('translations.default_locale', 'en');
+                    $supportedLocales = config('translations.supported_locales', ['en', 'ru', 'kk']);
+                }
+            } catch (\Throwable $e) {
+                // Keep default values if container not bootstrapped
+            }
+
+            if (is_array($titleData) || is_array($descriptionData) || count($supportedLocales) > 1) {
+                $titleData = is_array($titleData) ? $titleData : [$defaultLocale => $titleData];
+                $descriptionData = is_array($descriptionData) ? $descriptionData : [$defaultLocale => $descriptionData];
+
+                $sourceLocaleTitle = isset($titleData[$defaultLocale]) ? $defaultLocale : (key($titleData) ?: $defaultLocale);
+                $sourceLocaleDesc = isset($descriptionData[$defaultLocale]) ? $defaultLocale : (key($descriptionData) ?: $defaultLocale);
+
+                foreach ($supportedLocales as $locale) {
+                    if (empty($titleData[$locale])) {
+                        $sourceText = $titleData[$sourceLocaleTitle] ?? '';
+                        if ($sourceText !== '') {
+                            $titleData[$locale] = $translationService->translateText($sourceText, $locale, $sourceLocaleTitle);
+                        }
+                    }
+                    if (empty($descriptionData[$locale])) {
+                        $sourceText = $descriptionData[$sourceLocaleDesc] ?? '';
+                        if ($sourceText !== '') {
+                            $descriptionData[$locale] = $translationService->translateText($sourceText, $locale, $sourceLocaleDesc);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (is_array($titleData) && ! is_array($descriptionData)) {
+            $descString = $descriptionData;
+            $descriptionData = [];
+            foreach (array_keys($titleData) as $locale) {
+                $descriptionData[$locale] = $descString;
+            }
+        } elseif (! is_array($titleData) && is_array($descriptionData)) {
+            $titleString = $titleData;
+            $titleData = [];
+            foreach (array_keys($descriptionData) as $locale) {
+                $titleData[$locale] = $titleString;
+            }
+        }
+
+        return [
+            'meta_title' => $this->formatField($titleData, 60),
+            'meta_description' => $this->formatField($descriptionData ?: $titleData, 160),
+        ];
+    }
+
+    /**
+     * Extract title and description from an Eloquent Model.
+     */
+    protected function extractFromModel(Model $model): array
+    {
+        $title = null;
+        $description = null;
+
+        $titleSource = method_exists($model, 'getSeoTitleSource')
+            ? $model->getSeoTitleSource()
+            : (property_exists($model, 'seoTitleSource') ? $model->seoTitleSource : null);
+
+        $descriptionSource = method_exists($model, 'getSeoDescriptionSource')
+            ? $model->getSeoDescriptionSource()
+            : (property_exists($model, 'seoDescriptionSource') ? $model->seoDescriptionSource : null);
+
+        $titleKeys = array_filter(array_unique(array_merge(
+            $titleSource ? [$titleSource] : [],
+            ['meta_title', 'title', 'name', 'heading', 'headline']
+        )));
+
+        $descriptionKeys = array_filter(array_unique(array_merge(
+            $descriptionSource ? [$descriptionSource] : [],
+            ['meta_description', 'description', 'summary', 'content', 'body', 'intro']
+        )));
+
+        $hasTranslations = method_exists($model, 'getTranslations');
+
+        foreach ($titleKeys as $key) {
+            if ($hasTranslations && method_exists($model, 'isTranslatableAttribute') && $model->isTranslatableAttribute($key)) {
+                $title = $model->getTranslations($key);
+                if (! empty($title)) {
+                    break;
+                }
+            } else {
+                $val = $model->getAttribute($key);
+                if ($val !== null && $val !== '') {
+                    $title = $val;
+                    break;
+                }
+            }
+        }
+
+        foreach ($descriptionKeys as $key) {
+            if ($hasTranslations && method_exists($model, 'isTranslatableAttribute') && $model->isTranslatableAttribute($key)) {
+                $description = $model->getTranslations($key);
+                if (! empty($description)) {
+                    break;
+                }
+            } else {
+                $val = $model->getAttribute($key);
+                if ($val !== null && $val !== '') {
+                    $description = $val;
+                    break;
+                }
+            }
+        }
+
+        return [$title, $description];
+    }
+
+    /**
+     * Extract title and description from an array.
+     */
+    protected function extractFromArray(array $array, mixed $fallbackDescription = null): array
+    {
+        $hasKey = function (array $arr, array $keys) {
+            foreach ($keys as $k) {
+                if (array_key_exists($k, $arr)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        $titleKeys = ['meta_title', 'title', 'name', 'heading', 'headline'];
+        $descriptionKeys = ['meta_description', 'description', 'summary', 'content', 'body', 'intro'];
+
+        if ($hasKey($array, $titleKeys) || $hasKey($array, $descriptionKeys)) {
+            $title = null;
+            $description = null;
+
+            foreach ($titleKeys as $key) {
+                if (isset($array[$key])) {
+                    $title = $array[$key];
+                    break;
+                }
+            }
+
+            foreach ($descriptionKeys as $key) {
+                if (isset($array[$key])) {
+                    $description = $array[$key];
+                    break;
+                }
+            }
+
+            return [$title, $description ?: $fallbackDescription];
+        }
+
+        return [$array, $fallbackDescription];
+    }
+
+    /**
+     * Format the field, handling both string and array (multilingual) inputs.
+     */
+    protected function formatField(mixed $value, int $limit): mixed
+    {
+        if (is_array($value)) {
+            $result = [];
+            foreach ($value as $locale => $text) {
+                $result[$locale] = $this->cleanAndLimit($text, $limit);
+            }
+
+            return $result;
+        }
+
+        return $this->cleanAndLimit($value, $limit);
+    }
+
+    /**
+     * Clean and limit string value.
+     */
+    protected function cleanAndLimit(mixed $value, int $limit): string
+    {
+        if ($value === null || is_array($value)) {
+            return '';
+        }
+
+        return Str::limit(
+            trim(strip_tags((string) $value)),
+            $limit,
+            ''
+        );
+    }
+}

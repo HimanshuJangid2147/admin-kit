@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Repositories\Admin\Interface;
+
+use App\Models\UploadStaging;
+use Illuminate\Database\Eloquent\Collection;
+
+interface UploadStagingRepositoryInterface
+{
+    /**
+     * Create a new temporary staging upload record.
+     */
+    public function create(array $data): UploadStaging;
+
+    /**
+     * Find a staging upload record by UUID.
+     */
+    public function findByUuid(string $uuid): ?UploadStaging;
+
+    /**
+     * Update the status of a staging record.
+     */
+    public function updateStatus(string $uuid, string $status): bool;
+
+    /**
+     * Delete a staging record by UUID.
+     */
+    public function deleteByUuid(string $uuid): bool;
+
+    /**
+     * Fetch stale committed or failed staging records older than hours threshold.
+     */
+    public function getStaleStagingUploads(int $hoursThreshold = 24): Collection;
+
+    /**
+     * Fetch all committed or failed staging records regardless of age.
+     */
+    public function getAllStagingUploads(): Collection;
+}

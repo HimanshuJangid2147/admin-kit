@@ -1,0 +1,188 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Log;
+use Mews\Purifier\Facades\Purifier;
+use Stichoza\GoogleTranslate\GoogleTranslate;
+use Throwable;
+
+class TranslationService
+{
+    protected string $defaultLocale;
+
+    protected array $supportedLocales;
+
+    protected bool $autoTranslate;
+
+    protected array $cache = [];
+
+    public function __construct()
+    {
+        $this->defaultLocale = config('translations.default_locale', config('admin.locales.default', 'en'));
+        $this->supportedLocales = config('translations.supported_locales', config('admin.locales.supported', ['en', 'ru', 'kk']));
+        $this->autoTranslate = (bool) config('translations.auto_translate', config('admin.locales.auto_translate', true));
+    }
+
+    public function sanitizeHtml(?string $html): string
+    {
+        try {
+            if (blank($html)) {
+                return '';
+            }
+
+            if (class_exists(Purifier::class)) {
+                return Purifier::clean($html);
+            }
+
+            return strip_tags($html, '<p><br><strong><em><u><a><ul><ol><li><h1><h2><h3><h4><h5><h6><blockquote><table><thead><tbody><tr><th><td><img>');
+        } catch (Throwable $e) {
+            Log::error('HTML sanitization failed.', ['exception' => $e]);
+
+            return $html ?? '';
+        }
+    }
+
+    public function translateText(?string $text, string $target, ?string $source = null): string
+    {
+        if (blank($text) || ! is_string($text)) {
+            return $text ?? '';
+        }
+
+        $source = $source ?? $this->defaultLocale;
+
+        try {
+            return $this->performTranslation($text, $target, $source);
+        } catch (Throwable $e) {
+            Log::error('Text translation failed.', ['target' => $target, 'exception' => $e]);
+
+            return $text;
+        }
+    }
+
+    public function translateHtml(?string $html, string $target, ?string $source = null): string
+    {
+        if (blank($html) || ! is_string($html)) {
+            return $html ?? '';
+        }
+
+        $source = $source ?? $this->defaultLocale;
+
+        try {
+            $cleanHtml = $this->sanitizeHtml($html);
+            $translatedHtml = $this->performTranslation($cleanHtml, $target, $source);
+
+            return $this->sanitizeHtml($translatedHtml);
+        } catch (Throwable $e) {
+            Log::error('HTML translation failed.', ['target' => $target, 'exception' => $e]);
+
+            return $this->sanitizeHtml($html);
+        }
+    }
+
+    public function translateFields(array $fields, bool $isHtml = false): array
+    {
+        $translated = [];
+
+        foreach ($fields as $field => $value) {
+            $translated[$field] = [
+                $this->defaultLocale => $value,
+            ];
+
+            if (blank($value) || ! is_string($value)) {
+                foreach ($this->supportedLocales as $locale) {
+                    if ($locale !== $this->defaultLocale) {
+                        $translated[$field][$locale] = $value;
+                    }
+                }
+
+                continue;
+            }
+
+            foreach ($this->supportedLocales as $locale) {
+                if ($locale === $this->defaultLocale) {
+                    continue;
+                }
+
+                try {
+                    $translated[$field][$locale] = $isHtml
+                        ? $this->translateHtml($value, $locale, $this->defaultLocale)
+                        : $this->translateText($value, $locale, $this->defaultLocale);
+                } catch (Throwable $e) {
+                    Log::error("Field translation failed for {$locale}.", ['field' => $field, 'exception' => $e]);
+                    $translated[$field][$locale] = $value;
+                }
+            }
+        }
+
+        return $translated;
+    }
+
+    public function fillMissingTranslations(array $fields): array
+    {
+        if (! $this->autoTranslate) {
+            return $fields;
+        }
+
+        foreach ($fields as $field => $translations) {
+            if (! is_array($translations) || empty($translations[$this->defaultLocale])) {
+                continue;
+            }
+
+            $sourceValue = $translations[$this->defaultLocale];
+            if (! is_string($sourceValue)) {
+                continue;
+            }
+
+            foreach ($this->supportedLocales as $locale) {
+                if ($locale === $this->defaultLocale) {
+                    continue;
+                }
+
+                try {
+                    if (empty($translations[$locale])) {
+                        $fields[$field][$locale] = $this->translateText($sourceValue, $locale, $this->defaultLocale);
+                    }
+                } catch (Throwable $e) {
+                    Log::error("Auto fill translation failed for {$locale}.", ['field' => $field, 'exception' => $e]);
+                    $fields[$field][$locale] = $sourceValue;
+                }
+            }
+        }
+
+        return $fields;
+    }
+
+    private function performTranslation(string $text, string $target, string $source): string
+    {
+        $cacheKey = md5($target.'_'.$source.'_'.trim($text));
+
+        if (isset($this->cache[$cacheKey])) {
+            return $this->cache[$cacheKey];
+        }
+
+        if (! class_exists(GoogleTranslate::class)) {
+            return $text;
+        }
+
+        $tr = new GoogleTranslate;
+        $tr->setSource($source);
+        $tr->setTarget($target);
+
+        $result = $tr->translate($text);
+
+        if ($result === $text && $source !== 'auto') {
+            try {
+                $tr->setSource('auto');
+                $result = $tr->translate($text);
+            } catch (Throwable $inner) {
+                Log::warning("Translation retry failed for target {$target}.", ['exception' => $inner]);
+            }
+        }
+
+        $this->cache[$cacheKey] = $result;
+        usleep(150000);
+
+        return $result;
+    }
+}

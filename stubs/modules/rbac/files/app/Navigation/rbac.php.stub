@@ -1,0 +1,22 @@
+<?php
+
+return [
+    [
+        'group' => 'System Administration',
+        'label' => 'Team Members',
+        'route' => 'admin.users.index',
+        'active' => 'admin.users.*',
+        'icon' => 'fa-solid fa-users-gear',
+        'permission' => 'user.read',
+        'order' => 80,
+    ],
+    [
+        'group' => 'System Administration',
+        'label' => 'Roles & Permissions',
+        'route' => 'admin.roles.index',
+        'active' => 'admin.roles.*',
+        'icon' => 'fa-solid fa-shield-halved',
+        'permission' => 'role.read',
+        'order' => 81,
+    ],
+];

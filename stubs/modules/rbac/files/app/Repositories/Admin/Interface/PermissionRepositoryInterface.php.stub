@@ -1,0 +1,13 @@
+<?php
+
+namespace App\Repositories\Admin\Interface;
+
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Role;
+
+interface PermissionRepositoryInterface
+{
+    public function getAllGroupedByPrefix(): Collection;
+
+    public function getGroupedByPrefixForRole(Role $role): Collection;
+}

@@ -1,0 +1,10 @@
+<div class="flex flex-wrap gap-1">
+    @foreach($countries as $country)
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/50">
+            @if(!empty($country->flag_preview_url))
+                <img src="{{ $country->flag_preview_url }}" alt="{{ $country->name }} flag" class="w-3.5 h-2.5 object-cover rounded-sm">
+            @endif
+            {{ $country->name }}
+        </span>
+    @endforeach
+</div>

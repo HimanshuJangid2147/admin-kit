@@ -1,0 +1,224 @@
+@extends('layouts.app')
+
+@section('title', statictranslations('Add Team Member'))
+@section('page-title', statictranslations('Add Team Member'))
+
+@section('content')
+<div class="max-w-screen mx-auto space-y-6">
+
+    <form id="user-form" action="{{ route('admin.users.store') }}" method="POST" enctype="multipart/form-data">
+        @csrf
+
+        {{-- Page Header & Floating Actions --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-xl md:text-2xl font-serif font-black text-zinc-900 dark:text-white leading-tight">
+                    {{ statictranslations('Create Admin Profile') }}
+                </h1>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                    {{ statictranslations('Establish a new administrative account and set explicit system access controls.') }}
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{{ route('admin.users.index') }}" class="btn-secondary py-2 px-4 text-xs">
+                    <x-lucide-arrow-left class="w-3.5 h-3.5" />
+                    {{ statictranslations('Cancel') }}
+                </a>
+                <button type="submit" class="btn-gold py-2 px-6 text-xs group relative overflow-hidden">
+                    <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></span>
+                    <span class="relative z-10 flex items-center gap-2">
+                        <x-lucide-user-plus class="w-3.5 h-3.5" />
+                        {{ statictranslations('Create Profile') }}
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        {{-- Error Display --}}
+        @if ($errors->any())
+            <div class="mb-6 p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-xs text-rose-600 dark:text-rose-400 space-y-1 animate-fade-in backdrop-blur-md">
+                <div class="font-bold flex items-center gap-1.5 mb-1">
+                    <x-lucide-alert-triangle class="w-3.5 h-3.5" />
+                    {{ statictranslations('Please correct the following errors:') }}
+                </div>
+                <ul class="list-disc pl-4 space-y-0.5">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Asymmetrical Bento Grid --}}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            {{-- LEFT COLUMN (1/3) - Identity & Status --}}
+            <div class="lg:col-span-4 space-y-6">
+
+                {{-- Avatar Upload Card --}}
+                <div class="lj-card p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(212,175,55,0.08)_0%,_transparent_70%)] pointer-events-none" aria-hidden="true"></div>
+
+                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 w-full text-left mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-2">
+                        {{ statictranslations('Profile Identity') }}
+                    </h3>
+
+                    <div class="relative cursor-pointer mb-2" onclick="document.getElementById('avatar-input').click();">
+                        <div class="absolute inset-0 bg-gradient-to-tr from-lj-wine via-lj-gold to-lj-wine rounded-full blur-md opacity-25 group-hover:opacity-50 transition-opacity duration-300"></div>
+
+                        <div class="relative w-32 h-32 rounded-full overflow-hidden border-2 border-lj-gold/30 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-zinc-400 dark:text-zinc-500 shadow-xl z-10">
+                            <img src="" alt="Avatar Preview" class="w-full h-full object-cover absolute inset-0 hidden" id="avatar-preview-img">
+
+                            <div id="avatar-placeholder" class="flex flex-col items-center gap-1">
+                                <x-lucide-camera class="w-8 h-8 opacity-40" />
+                            </div>
+
+                            <div class="absolute inset-0 bg-zinc-950/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white gap-1 select-none z-20">
+                                <x-lucide-upload-cloud class="w-5 h-5 text-lj-gold" />
+                                <span class="text-[9px] uppercase tracking-wider font-bold">{{ statictranslations('Upload') }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="file" name="avatar" id="avatar-input" class="hidden" accept="image/*">
+                    <button type="button" id="avatar-clear-btn" class="hidden text-[10px] text-rose-500 hover:text-rose-600 font-bold uppercase tracking-widest mt-3 transition-colors">
+                        {{ statictranslations('Remove Avatar') }}
+                    </button>
+                    <p class="text-[10px] text-zinc-400 mt-3">{{ statictranslations('JPG, PNG, or WebP. Max 2MB.') }}</p>
+                </div>
+
+                {{-- Status Card --}}
+                <div class="lj-card p-6">
+                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4">
+                        {{ statictranslations('Account Status') }}
+                    </h3>
+                    <label class="relative inline-flex items-center cursor-pointer select-none group">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" checked class="sr-only peer">
+                        <div class="w-11 h-6 bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-lj-gold/50 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lj-wine peer-checked:border-lj-wine/40"></div>
+                        <span class="ml-3 text-xs font-bold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
+                            {{ statictranslations('Active System Access') }}
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            {{-- RIGHT COLUMN (2/3) - Details & Config --}}
+            <div class="lg:col-span-8 space-y-6">
+
+                {{-- Personal Details --}}
+                <div class="lj-card p-6 md:p-8 relative overflow-hidden">
+                    <div class="absolute -top-32 -right-32 w-64 h-64 rounded-full bg-lj-wine/5 blur-3xl pointer-events-none" aria-hidden="true"></div>
+
+                    <div class="flex items-center gap-2 mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-3">
+                        <x-lucide-user class="w-4 h-4 text-lj-gold" />
+                        <h2 class="text-sm font-serif font-bold text-zinc-900 dark:text-white">
+                            {{ statictranslations('Personal Details') }}
+                        </h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="space-y-2">
+                            <label for="name" class="lj-label">{{ statictranslations('Full Name') }} <span class="text-rose-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                                    <x-lucide-user-circle class="w-4 h-4" />
+                                </span>
+                                <input type="text" name="name" id="name" value="{{ old('name') }}" required class="lj-input pl-11 py-2.5" placeholder="{{ statictranslations('John Doe') }}">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="email" class="lj-label">{{ statictranslations('Email Address') }} <span class="text-rose-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                                    <x-lucide-mail class="w-4 h-4" />
+                                </span>
+                                <input type="email" name="email" id="email" value="{{ old('email') }}" required class="lj-input pl-11 py-2.5" placeholder="{{ statictranslations('admin@example.com') }}">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="phone" class="lj-label">{{ statictranslations('Phone Number') }}</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                                    <x-lucide-phone class="w-4 h-4" />
+                                </span>
+                                <input type="text" name="phone" id="phone" value="{{ old('phone') }}" class="lj-input pl-11 py-2.5" placeholder="{{ statictranslations('e.g. +1 555-0199') }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Security & Access --}}
+                <div class="lj-card p-6 md:p-8 relative overflow-hidden">
+                    <div class="flex items-center gap-2 mb-6 border-b border-zinc-200/50 dark:border-white/5 pb-3">
+                        <x-lucide-shield-check class="w-4 h-4 text-lj-gold" />
+                        <h2 class="text-sm font-serif font-bold text-zinc-900 dark:text-white">
+                            {{ statictranslations('Security & Regional Access') }}
+                        </h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                        <div class="space-y-2 relative">
+                            <label for="password" class="lj-label">{{ statictranslations('Password') }} <span class="text-rose-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                                    <x-lucide-key-round class="w-4 h-4" />
+                                </span>
+                                <input type="password" name="password" id="password" required class="lj-input pl-11 py-2.5" placeholder="••••••••">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 relative">
+                            <label for="confirmed_password" class="lj-label">{{ statictranslations('Confirm Password') }} <span class="text-rose-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                                    <x-lucide-shield class="w-4 h-4" />
+                                </span>
+                                <input type="password" name="confirmed_password" id="confirmed_password" required class="lj-input pl-11 py-2.5" placeholder="••••••••">
+                            </div>
+                        </div>
+                    </div>
+
+                    @php
+                        $oldRoles = collect(old('role_ids', []))
+                            ->map(fn($id) => ['id' => $id, 'text' => statictranslations('Role ID: ') . $id])
+                            ->toJson();
+                        $oldCountries = collect(old('country_ids', []))
+                            ->map(fn($id) => ['id' => $id, 'text' => statictranslations('Country ID: ') . $id])
+                            ->toJson();
+                    @endphp
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-zinc-200/50 dark:border-white/5">
+                        <div class="space-y-2">
+                            <label class="lj-label">{{ statictranslations('System Roles') }} <span class="text-rose-500">*</span></label>
+                            <select class="select2-ajax w-full" data-allow-clear="true"
+                                data-placeholder="{{ statictranslations('Assign roles...') }}"
+                                data-option-url="{{ route('admin.roles.list') }}"
+                                data-preselected="{{ $oldRoles }}" name="role_ids[]" multiple required>
+                            </select>
+                        </div>
+
+                        @if(Route::has('admin.countries.list'))
+                            <div class="space-y-2">
+                                <label class="lj-label">{{ statictranslations('Country Access') }}</label>
+                                <select class="select2-ajax w-full" data-allow-clear="true"
+                                    data-placeholder="{{ statictranslations('Assign countries...') }}"
+                                    data-option-url="{{ route('admin.countries.list') }}"
+                                    data-preselected="{{ $oldCountries }}" name="country_ids[]" multiple>
+                                </select>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </form>
+</div>
+@endsection
+
+@push('scripts')
+    @vite('resources/js/pages/userForm.js')
+@endpush

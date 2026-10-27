@@ -1,0 +1,35 @@
+<?php
+
+return [
+    'brand' => [
+        'name' => env('ADMIN_BRAND_NAME', 'Admin Studio'),
+        'short_name' => env('ADMIN_SHORT_NAME', 'AS'),
+        'logo' => env('ADMIN_LOGO_PATH', 'icons/logo.png'),
+        'favicon' => env('ADMIN_FAVICON_PATH', 'icons/favicon.svg'),
+        'home_url' => env('ADMIN_HOME_URL', '/'),
+        'copyright' => env('ADMIN_COPYRIGHT', 'All rights reserved.'),
+    ],
+
+    // Set to true by the rbac module. When false, the sidebar skips permission checks.
+    'rbac' => env('ADMIN_RBAC', false),
+
+    'locales' => [
+        'default' => env('ADMIN_DEFAULT_LOCALE', 'en'),
+        'supported' => array_filter(array_map('trim', explode(',', env('ADMIN_LOCALES', 'en')))),
+        'auto_translate' => env('ADMIN_AUTO_TRANSLATE', false),
+    ],
+
+    'route_prefix' => env('ADMIN_ROUTE_PREFIX', 'admin'),
+    'route_name_prefix' => env('ADMIN_ROUTE_NAME_PREFIX', 'admin.'),
+    'guard' => env('ADMIN_GUARD', 'admin'),
+
+    'uploads' => [
+        'disk' => env('ADMIN_UPLOADS_DISK', 'public'),
+        'chunk_retention' => 86400,
+    ],
+
+    'throttle' => [
+        'general' => env('ADMIN_THROTTLE_GENERAL', 'throttle:api'),
+        'auth' => env('ADMIN_THROTTLE_AUTH', 'throttle:5,1'),
+    ],
+];

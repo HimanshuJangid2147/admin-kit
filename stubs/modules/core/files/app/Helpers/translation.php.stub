@@ -1,0 +1,88 @@
+<?php
+
+use App\Services\TranslationService;
+
+if (! function_exists('gtrans')) {
+    function gtrans(?string $text, string $target, bool $isHtml = false): string
+    {
+        $service = app(TranslationService::class);
+
+        return $isHtml ? $service->translateHtml($text, $target) : $service->translateText($text, $target);
+    }
+}
+
+if (! function_exists('auto_translate')) {
+    /**
+     * Automatically translates missing locales for specified text and HTML fields.
+     */
+    function auto_translate(array $data, array $textFields = [], array $htmlFields = []): array
+    {
+        $service = app(TranslationService::class);
+        $locales = config('translations.supported_locales', ['en', 'ru', 'kk']);
+
+        // 1. Process standard text fields (plain text, strip HTML tags)
+        foreach ($textFields as $field) {
+            if (! isset($data[$field]['en'])) {
+                continue;
+            }
+
+            if (is_string($data[$field]['en'])) {
+                $data[$field]['en'] = trim(strip_tags($data[$field]['en']));
+            } elseif (is_array($data[$field]['en'])) {
+                foreach ($data[$field]['en'] as $k => $item) {
+                    if (is_string($item)) {
+                        $data[$field]['en'][$k] = trim(strip_tags($item));
+                    }
+                }
+            }
+
+            foreach ($locales as $locale) {
+                if ($locale !== 'en') {
+                    if (empty($data[$field][$locale])) {
+                        if (is_array($data[$field]['en'])) {
+                            $translatedItems = [];
+                            foreach ($data[$field]['en'] as $item) {
+                                $translatedItems[] = is_string($item) ? $service->translateText($item, $locale) : $item;
+                            }
+                            $data[$field][$locale] = $translatedItems;
+                        } else {
+                            $data[$field][$locale] = $service->translateText($data[$field]['en'], $locale);
+                        }
+                    } else {
+                        if (is_string($data[$field][$locale])) {
+                            $data[$field][$locale] = trim(strip_tags($data[$field][$locale]));
+                        } elseif (is_array($data[$field][$locale])) {
+                            foreach ($data[$field][$locale] as $k => $item) {
+                                if (is_string($item)) {
+                                    $data[$field][$locale][$k] = trim(strip_tags($item));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Process HTML fields (rich text editor)
+        foreach ($htmlFields as $field) {
+            if (! isset($data[$field]['en'])) {
+                continue;
+            }
+
+            // Sanitize default locale HTML content
+            $data[$field]['en'] = $service->sanitizeHtml($data[$field]['en']);
+
+            foreach ($locales as $locale) {
+                if ($locale !== 'en') {
+                    if (empty($data[$field][$locale])) {
+                        $data[$field][$locale] = $service->translateHtml($data[$field]['en'], $locale);
+                    } else {
+                        $data[$field][$locale] = $service->sanitizeHtml($data[$field][$locale]);
+                    }
+                }
+            }
+        }
+
+        return $data;
+    }
+}

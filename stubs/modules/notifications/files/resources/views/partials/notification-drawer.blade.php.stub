@@ -1,0 +1,94 @@
+{{-- resources/views/partials/notification-drawer.blade.php --}}
+<div
+    id="notification-backdrop"
+    class="fixed inset-0 z-45 bg-black/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300"
+    role="presentation"
+></div>
+
+<div
+    id="notification-drawer"
+    class="fixed inset-y-0 right-0 z-50 max-w-md w-full bg-card border-l border-border shadow-2xl flex flex-col translate-x-full transition-transform duration-[380ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+    role="dialog"
+    aria-modal="true"
+    aria-label="{{ statictranslations('Notifications') }}"
+    tabindex="-1"
+>
+    {{-- Drawer Header --}}
+    <div class="px-6 py-5 border-b border-border/50 flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+            <h2 class="font-sans font-bold text-xl text-foreground leading-none">{{ statictranslations('Notifications') }}</h2>
+            <div class="flex items-center gap-2">
+                <button
+                    id="notification-sound-toggle"
+                    type="button"
+                    title="{{ statictranslations('Toggle Sound') }}"
+                    aria-label="{{ statictranslations('Toggle Sound') }}"
+                    class="flex items-center justify-center w-8 h-8 rounded-full bg-muted/40 border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 cursor-pointer"
+                >
+                    <i id="sound-on-icon" class="fa-solid fa-volume-high text-xs"></i>
+                    <i id="sound-off-icon" class="fa-solid fa-volume-xmark text-xs hidden"></i>
+                </button>
+                <button
+                    id="notification-drawer-close"
+                    type="button"
+                    aria-label="{{ statictranslations('Close drawer') }}"
+                    class="flex items-center justify-center w-8 h-8 rounded-full bg-muted/40 border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 cursor-pointer"
+                >
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-1 text-[11px]">
+            <p class="font-sans text-[10px] uppercase tracking-wider text-muted-foreground">
+                <span id="drawer-unread-count" class="font-semibold text-brand-orange">0</span> {{ statictranslations('unread alerts') }}
+            </p>
+            <div class="flex items-center gap-2">
+                <button
+                    id="notification-mark-all"
+                    type="button"
+                    class="font-sans text-[10px] uppercase tracking-[0.12em] text-primary hover:text-brand-green-hover transition-colors leading-none cursor-pointer font-medium"
+                >
+                    {{ statictranslations('Mark all as read') }}
+                </button>
+                <span class="text-border/60 text-xs select-none">•</span>
+                <button
+                    id="notification-clear-all"
+                    type="button"
+                    class="font-sans text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 hover:text-destructive transition-colors leading-none cursor-pointer font-medium"
+                >
+                    {{ statictranslations('Clear all') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Drawer Body --}}
+    <div class="flex-1 overflow-y-auto py-2 divide-y divide-border/30 custom-scrollbar" id="notification-list">
+        {{-- Skeleton / Loading State --}}
+        <div id="notification-loading" class="px-6 py-6 space-y-4">
+            @for ($i = 0; $i < 3; $i++)
+                <div class="flex gap-4 animate-pulse">
+                    <div class="w-8 h-8 rounded-full bg-muted/60 shrink-0"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-3 bg-muted/60 rounded w-2/3"></div>
+                        <div class="h-2.5 bg-muted/40 rounded w-full"></div>
+                        <div class="h-2 bg-muted/30 rounded w-1/4"></div>
+                    </div>
+                </div>
+            @endfor
+        </div>
+
+        {{-- Dynamic Items Container --}}
+        <div id="notification-items-container" class="divide-y divide-border/30"></div>
+
+        {{-- Empty State (Hidden initially) --}}
+        <div id="notification-empty" class="hidden px-6 py-16 text-center">
+            <i class="fa-solid fa-bell-slash text-3xl text-muted-foreground/30 mx-auto mb-4 block"></i>
+            <h4 class="font-serif italic text-lg text-foreground">{{ statictranslations('All Curated') }}</h4>
+            <p class="text-xs text-muted-foreground mt-2 font-light max-w-[240px] mx-auto">
+                {{ statictranslations('No new notifications. We will alert you when client activities update.') }}
+            </p>
+        </div>
+    </div>
+</div>

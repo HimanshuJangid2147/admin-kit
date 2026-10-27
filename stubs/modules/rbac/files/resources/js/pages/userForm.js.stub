@@ -1,0 +1,44 @@
+/* ─────────────────────────────────────────────────────────────
+   AVATAR PREVIEW HANDLER
+   ───────────────────────────────────────────────────────────── */
+const AvatarPreview = (() => {
+    const init = () => {
+        const fileInput = document.getElementById('avatar-input');
+        const imgPreview = document.getElementById('avatar-preview-img');
+        const placeholder = document.getElementById('avatar-placeholder');
+        const clearBtn = document.getElementById('avatar-clear-btn');
+
+        if (!fileInput) return;
+
+        // Handle File Selection
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    imgPreview.src = event.target.result;
+                    imgPreview.classList.remove('hidden');
+
+                    if (placeholder) placeholder.classList.add('hidden');
+                    if (clearBtn) clearBtn.classList.remove('hidden');
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        // Handle Clear/Remove Click
+        clearBtn?.addEventListener('click', function() {
+            fileInput.value = ''; // Clear file input
+            imgPreview.src = '';
+            imgPreview.classList.add('hidden');
+
+            if (placeholder) placeholder.classList.remove('hidden');
+            clearBtn.classList.add('hidden');
+        });
+    };
+
+    return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    AvatarPreview.init();
+});

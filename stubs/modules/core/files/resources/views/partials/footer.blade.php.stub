@@ -1,0 +1,21 @@
+@php
+    $t = fn ($text) => function_exists('statictranslations') ? statictranslations($text) : __($text);
+@endphp
+
+<footer class="mt-auto px-8 py-4 border-t border-border bg-background/80">
+    <div class="flex items-center justify-between">
+        <p class="font-sans text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            &copy; {{ date('Y') }} {{ config('admin.brand.name', 'Admin Studio') }}. {{ config('admin.brand.copyright', 'All rights reserved.') }}
+        </p>
+
+        <div class="flex items-center gap-6 font-sans text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            <div class="flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                </span>
+                <span>{{ $t('Operational') }}</span>
+            </div>
+        </div>
+    </div>
+</footer>

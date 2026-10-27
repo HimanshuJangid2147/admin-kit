@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Http\Requests\Admin\Setting;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class SocialMediaSettingRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'facebook_link' => 'nullable|url|max:255',
+            'instagram_link' => 'nullable|url|max:255',
+            'linkedin_link' => 'nullable|url|max:255',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'facebook_link.url' => statictranslations('The Facebook link must be a valid URL.'),
+            'facebook_link.max' => statictranslations('The Facebook link may not be greater than 255 characters.'),
+            'instagram_link.url' => statictranslations('The Instagram link must be a valid URL.'),
+            'instagram_link.max' => statictranslations('The Instagram link may not be greater than 255 characters.'),
+            'linkedin_link.url' => statictranslations('The LinkedIn link must be a valid URL.'),
+            'linkedin_link.max' => statictranslations('The LinkedIn link may not be greater than 255 characters.'),
+        ];
+    }
+}

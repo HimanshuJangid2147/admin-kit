@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Repositories\Admin\Interface;
+
+interface BannerRepositoryInterface
+{
+    public function existsByPage(string $pageName): bool;
+
+    public function upsertByPage(string $pageName, array $data);
+
+    public function findByPage(string $pageName);
+
+    public function getBannerByPage(string $pageName);
+
+    public function getAllBanners();
+}

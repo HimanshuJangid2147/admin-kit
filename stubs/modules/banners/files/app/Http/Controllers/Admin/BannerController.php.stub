@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Banner\StoreOrUpdateBannerRequest;
+use App\Services\BannerService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+
+class BannerController extends Controller
+{
+    public function storeOrUpdate(StoreOrUpdateBannerRequest $request, BannerService $bannerService): JsonResponse
+    {
+        try {
+            $banner = $bannerService->handleBannerUpsert($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => statictranslations('Banner saved successfully.'),
+                'data' => $banner,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error saving banner: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'success' => false,
+                'message' => statictranslations('Failed to save banner. Please try again.'),
+            ], 500);
+        }
+    }
+}

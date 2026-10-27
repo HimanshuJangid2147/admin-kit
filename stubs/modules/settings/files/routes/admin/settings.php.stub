@@ -1,0 +1,16 @@
+<?php
+
+use App\Http\Controllers\Admin\SettingsController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('settings')->name('settings.')->group(function () {
+    Route::get('/', [SettingsController::class, 'index'])->name('index');
+    Route::post('/initialize', [SettingsController::class, 'initializeSettings'])->name('initialize');
+    Route::post('/site-content', [SettingsController::class, 'updateSiteContent'])->name('site-content.update');
+    Route::post('/social-media', [SettingsController::class, 'updateSocialMedia'])->name('social-media.update');
+    Route::post('/footer-pdfs', [SettingsController::class, 'updateFooterPdfs'])->name('footer-pdfs.update');
+    Route::post('/site-seo', [SettingsController::class, 'updateSiteSeo'])->name('site-seo.update');
+    Route::post('/notification-sound', [SettingsController::class, 'updateNotificationSound'])->name('notification-sound.update');
+    Route::post('/toggle-maintenance', [SettingsController::class, 'toggleMaintenanceMode'])->name('maintenance.toggle');
+    Route::get('/check-maintenance', [SettingsController::class, 'checkMaintenanceMode'])->name('maintenance.check');
+});

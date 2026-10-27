@@ -1,0 +1,36 @@
+{
+    "name": "notifications",
+    "description": "Real-time admin notification drawer with Pusher broadcasting, Web Audio synth chime, and unread badges.",
+    "requires": [
+        "core"
+    ],
+    "files": {
+        "app/Models/AdminNotification.php.stub": "app/Models/AdminNotification.php",
+        "app/Events/AdminNotificationEvent.php.stub": "app/Events/AdminNotificationEvent.php",
+        "app/Repositories/Admin/Interface/AdminNotificationRepositoryInterface.php.stub": "app/Repositories/Admin/Interface/AdminNotificationRepositoryInterface.php",
+        "app/Repositories/Admin/Repositories/AdminNotificationRepository.php.stub": "app/Repositories/Admin/Repositories/AdminNotificationRepository.php",
+        "app/Services/AdminNotificationService.php.stub": "app/Services/AdminNotificationService.php",
+        "app/Http/Controllers/Admin/NotificationController.php.stub": "app/Http/Controllers/Admin/NotificationController.php",
+        "app/Providers/AdminNotificationServiceProvider.php.stub": "app/Providers/AdminNotificationServiceProvider.php",
+        "routes/admin/notifications.php.stub": "routes/admin/notifications.php",
+        "resources/views/partials/notification-drawer.blade.php.stub": "resources/views/partials/notification-drawer.blade.php",
+        "resources/js/notification-drawer.js.stub": "resources/js/notification-drawer.js"
+    },
+    "migrations": {
+        "database/migrations/create_admin_notifications_table.php.stub": "create_admin_notifications_table"
+    },
+    "env": {
+        "ADMIN_NOTIFICATIONS": "true"
+    },
+    "providers": [
+        "App\\Providers\\AdminNotificationServiceProvider"
+    ],
+    "npm": [
+        "pusher-js"
+    ],
+    "notes": [
+        "Run php artisan migrate to create the admin_notifications table.",
+        "Import resources/js/notification-drawer.js in your app entry point (e.g. resources/js/app.js).",
+        "Configure PUSHER_APP_KEY, PUSHER_APP_SECRET, and PUSHER_APP_CLUSTER in .env if using real-time broadcasting."
+    ]
+}

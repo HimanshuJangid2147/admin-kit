@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Translate\TranslationsRequest;
+use App\Services\TranslationService;
+use Illuminate\Http\JsonResponse;
+
+class TranslationController extends Controller
+{
+    /**
+     * Auto translate fields for supported locales.
+     */
+    public function autoFill(TranslationsRequest $request, TranslationService $translationService): JsonResponse
+    {
+        $request->validated();
+        $translated = $translationService->translateFields(
+            fields: (array) $request->input('fields', []),
+            isHtml: $request->boolean('is_html')
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => function_exists('statictranslations')
+                ? statictranslations('Translations generated successfully.')
+                : __('Translations generated successfully.'),
+            'data' => $translated,
+        ]);
+    }
+}

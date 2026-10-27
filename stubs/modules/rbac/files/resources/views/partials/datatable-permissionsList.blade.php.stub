@@ -1,0 +1,72 @@
+@php
+    $crudActions = ['create', 'read', 'update', 'delete'];
+    $processedList = collect();
+
+    // 1. Group permissions by their module prefix (e.g., 'role.read' -> 'role')
+    $grouped = $permissions->pluck('name')->groupBy(function ($name) {
+        return explode('.', $name)[0];
+    });
+
+    foreach ($grouped as $prefix => $names) {
+        // 2. Extract the action parts (e.g., 'read', 'create', 'export')
+        $actions = $names->map(function ($name) {
+            $parts = explode('.', $name);
+            return $parts[1] ?? '';
+        })->filter()->toArray();
+
+        // 3. Format the module name beautifully (e.g., "userManagement" -> "User Management")
+        $moduleName = ucwords(str_replace(['_', '-'], ' ', preg_replace('/(?<!^)[A-Z]/', ' $0', $prefix)));
+
+        // 4. Check if the module has all 4 standard CRUD actions
+        if (count(array_intersect($crudActions, $actions)) === 4) {
+            // Add the combined CRUD badge
+            $processedList->push($moduleName . ' CRUD');
+
+            // Add any extra actions outside of standard CRUD (e.g., 'export', 'approve')
+            $extraActions = array_diff($actions, $crudActions);
+            foreach ($extraActions as $extra) {
+                $processedList->push($moduleName . ' ' . ucfirst($extra));
+            }
+        } else {
+            // 5. If not full CRUD, list the permissions individually
+            foreach ($names as $name) {
+                $parts = explode('.', $name);
+                if (count($parts) > 1) {
+                    $processedList->push($moduleName . ' ' . ucfirst($parts[1]));
+                } else {
+                    // Fallback for permissions without a dot (e.g., 'manage_settings')
+                    $processedList->push(ucwords(str_replace(['_', '-'], ' ', preg_replace('/(?<!^)[A-Z]/', ' $0', $name))));
+                }
+            }
+        }
+    }
+
+    // 6. Apply UI Limits
+    $limit = 3;
+    $total = $processedList->count();
+    $displayed = $processedList->take($limit);
+    $remaining = $total - $limit;
+@endphp
+
+<div class="flex flex-wrap gap-1.5 items-center">
+    @if($total === 0)
+        <span class="text-[11px] text-zinc-400 dark:text-zinc-500 italic">
+            {{ statictranslations('No permissions assigned') }}
+        </span>
+    @else
+        @foreach($displayed as $badgeText)
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-zinc-700/50 uppercase tracking-wide shadow-sm">
+                {{ $badgeText }}
+            </span>
+        @endforeach
+
+        @if($remaining > 0)
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-lj-gold/10 text-lj-gold border border-lj-gold/20 cursor-help transition-colors hover:bg-lj-gold/20 shadow-sm"
+                title="{{ $processedList->skip($limit)->join(', ') }}"
+            >
+                +{{ $remaining }} {{ statictranslations('more') }}
+            </span>
+        @endif
+    @endif
+</div>

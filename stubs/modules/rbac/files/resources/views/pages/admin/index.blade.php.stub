@@ -1,0 +1,108 @@
+@extends('layouts.app')
+
+@section('title', statictranslations('Team Members'))
+@section('page-title', statictranslations('Team Members'))
+
+@section('content')
+<div class="space-y-6">
+
+    {{-- Page Header --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-xl md:text-2xl font-serif font-black text-zinc-900 dark:text-white leading-tight">
+                {{ statictranslations('Team Members') }}
+            </h1>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                {{ statictranslations('Manage administrative accounts and regional access.') }}
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button
+                type="button"
+                id="toggle-filters"
+                class="px-4 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] hover:border-lj-gold text-zinc-700 dark:text-zinc-300 hover:text-lj-gold flex items-center gap-2 cursor-pointer transition-all duration-300 shadow-sm"
+            >
+                <x-lucide-sliders-horizontal class="w-4 h-4 text-zinc-400 dark:text-zinc-500 group-hover:text-lj-gold" />
+                <span>{{ statictranslations('Filters') }}</span>
+            </button>
+            @can('userManagement.create')
+                <a href="{{ route('admin.users.create') }}" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-lj-wine to-lj-wine/80 hover:from-lj-gold hover:to-lj-gold/80 text-white font-semibold flex items-center gap-2 shadow-lg shadow-lj-wine/10 hover:shadow-lj-gold/20 transition-all duration-300 transform hover:-translate-y-0.5">
+                    <x-lucide-user-plus class="w-4 h-4" />
+                    {{ statictranslations('Add Team Member') }}
+                </a>
+            @endcan
+        </div>
+    </div>
+
+    {{-- Collapsible Filters Panel --}}
+    <div
+        id="filters-panel"
+        class="hidden overflow-hidden opacity-0 bg-white/60 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/[0.04] backdrop-blur-xl rounded-2xl shadow-sm transition-all duration-300"
+    >
+        <div class="p-5 flex flex-wrap items-center gap-4">
+            {{-- Role Filter --}}
+            <div class="w-full sm:w-48 space-y-1.5">
+                <label for="role_filter" class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{{ statictranslations('Filter by Role') }}</label>
+                <select id="role_filter" class="filter-select w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/40 text-xs text-zinc-700 dark:text-zinc-300 outline-none focus:border-lj-gold">
+                    <option value="">{{ statictranslations('All Roles') }}</option>
+                    @foreach($roles as $role)
+                        <option value="{{ $role->name }}">{{ $role->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Status Filter --}}
+            <div class="w-full sm:w-48 space-y-1.5">
+                <label for="status_filter" class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{{ statictranslations('Filter by Status') }}</label>
+                <select id="status_filter" class="filter-select w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/40 text-xs text-zinc-700 dark:text-zinc-300 outline-none focus:border-lj-gold">
+                    <option value="">{{ statictranslations('All Statuses') }}</option>
+                    <option value="1">{{ statictranslations('Active') }}</option>
+                    <option value="0">{{ statictranslations('Inactive') }}</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {{-- Table Card --}}
+    <div class="bg-white/60 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/[0.04] backdrop-blur-xl rounded-2xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table id="admins-table" data-ajax-url="{{ route('admin.users.data') }}" class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-zinc-200/50 dark:border-white/[0.04] bg-zinc-50/50 dark:bg-zinc-950/20 text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider">
+                        <th class="py-4 px-6 text-center w-12 dt-orderable-none">
+                            <input type="checkbox" id="select-all" class="w-4 h-4 rounded-md border border-zinc-300 dark:border-white/[0.08] bg-zinc-50 dark:bg-zinc-900/50 text-lj-wine dark:text-lj-gold focus:ring-1 focus:ring-offset-0 focus:ring-lj-wine/30 dark:focus:ring-lj-gold/30 cursor-pointer transition-all duration-200 hover:border-lj-wine/50 dark:hover:border-lj-gold/50">
+                        </th>
+                        <th class="py-4 px-6 text-center dt-orderable-none">{{ statictranslations('Avatar') }}</th>
+                        <th class="py-4 px-6 text-left">{{ statictranslations('Name') }}</th>
+                        <th class="py-4 px-6 text-left">{{ statictranslations('Username') }}</th>
+                        <th class="py-4 px-6 text-left">{{ statictranslations('Email') }}</th>
+                        <th class="py-4 px-6 text-left dt-orderable-none">{{ statictranslations('Roles') }}</th>
+                        <th class="py-4 px-6 text-left dt-orderable-none">{{ statictranslations('Countries') }}</th>
+                        <th class="py-4 px-6 text-center">{{ statictranslations('Status') }}</th>
+                        <th class="py-4 px-6 text-right">{{ statictranslations('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-200/40 dark:divide-white/[0.02] text-zinc-700 dark:text-zinc-300">
+                    {{-- Datatables AJAX load --}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{{-- Lightbox for Avatar Preview --}}
+<div id="dt-lightbox" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300" tabindex="-1" aria-label="{{ statictranslations('Image Lightbox') }}">
+    <button id="dt-lightbox-close" class="absolute top-5 right-5 text-white/70 hover:text-white transition-colors" aria-label="{{ statictranslations('Close Lightbox') }}">
+        <x-lucide-x class="w-8 h-8" />
+    </button>
+    <div id="dt-lightbox-panel" class="relative max-w-3xl max-h-[85vh] scale-95 transition-transform duration-300 p-2">
+        <img id="dt-lightbox-img" src="" alt="{{ statictranslations('Lightbox image') }}" class="max-w-full max-h-[80vh] rounded-xl object-contain shadow-2xl">
+        <div id="dt-lightbox-caption" class="text-center text-white/80 text-xs mt-3 font-serif italic"></div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+    @vite('resources/js/pages/users.js')
+@endpush

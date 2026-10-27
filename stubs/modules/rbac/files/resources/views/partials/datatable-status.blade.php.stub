@@ -1,0 +1,23 @@
+@if(!empty($toggle_url))
+    <label class="dt-switch relative inline-flex items-center cursor-pointer select-none">
+        <input
+            type="checkbox"
+            class="sr-only"
+            data-toggle-url="{{ $toggle_url }}"
+            data-record-id="{{ $id }}"
+            {{ !empty($status) ? 'checked' : '' }}
+        >
+        <span class="dt-switch-track relative rounded-full border border-zinc-200/60 dark:border-white/[0.08] bg-zinc-200/50 dark:bg-zinc-800/50">
+            <span class="dt-switch-thumb absolute rounded-full bg-white dark:bg-zinc-300 shadow-sm"></span>
+        </span>
+        <span class="dt-switch-label text-[11px] font-bold uppercase tracking-wider transition-colors duration-200 ml-2.5">
+            <span data-label-on class="{{ empty($status) ? 'hidden' : '' }} text-[#D4AF37]">{{ statictranslations('Active') }}</span>
+            <span data-label-off class="{{ !empty($status) ? 'hidden' : '' }} text-zinc-400 dark:text-zinc-500">{{ statictranslations('Inactive') }}</span>
+        </span>
+    </label>
+@else
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border {{ !empty($status) ? 'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/25' : 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20' }}">
+        <span class="w-1.5 h-1.5 rounded-full {{ !empty($status) ? 'bg-[#D4AF37] animate-pulse' : 'bg-zinc-400' }}"></span>
+        {{ !empty($status) ? statictranslations('Active') : statictranslations('Inactive') }}
+    </div>
+@endif

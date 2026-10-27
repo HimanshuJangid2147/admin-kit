@@ -1,0 +1,19 @@
+{
+    "name": "settings_pdfs",
+    "description": "Downloadable brochures and PDF uploader components for site settings",
+    "requires": ["settings", "uploads"],
+    "files": {
+        "resources/views/components/admin/pdfuploader.blade.php.stub": "resources/views/components/admin/pdfuploader.blade.php",
+        "resources/views/partials/pdf-upload-modal.blade.php.stub": "resources/views/partials/pdf-upload-modal.blade.php"
+    },
+    "migrations": {},
+    "providers": [],
+    "env": {
+        "ADMIN_SETTINGS_PDFS": "true"
+    },
+    "composer": [],
+    "npm": [],
+    "notes": [
+        "Include the PDF modal with @include('partials.pdf-upload-modal') if used on specific resource pages."
+    ]
+}

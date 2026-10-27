@@ -1,0 +1,75 @@
+import { UploadApi } from './Api.js';
+import { createUuid } from './uuid.js';
+
+export class ChunkUploader {
+    constructor(file, chunkSize = 2 * 1024 * 1024, profile = 'image') { // 2MB default chunk slice
+        this.file = file;
+        this.chunkSize = chunkSize;
+        this.profile = profile;
+        this.api = new UploadApi();
+        this.uploadUuid = createUuid();
+        this.abortController = new AbortController();
+    }
+
+    calculateChunks() {
+        const totalChunks = Math.ceil(this.file.size / this.chunkSize);
+        const chunks = [];
+
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * this.chunkSize;
+            const end = Math.min(start + this.chunkSize, this.file.size);
+            chunks.push({
+                index: i,
+                slice: this.file.slice(start, end),
+            });
+        }
+
+        return { totalChunks, chunks };
+    }
+
+    async upload(onProgress = null) {
+        if (this.file.size <= this.chunkSize) {
+            // Direct upload for small files
+            return await this.api.uploadDirect(this.file, onProgress, this.abortController.signal, this.profile);
+        }
+
+        const { totalChunks, chunks } = this.calculateChunks();
+
+        for (const chunk of chunks) {
+            await this.api.uploadChunkSlice(
+                chunk.slice,
+                this.uploadUuid,
+                chunk.index,
+                totalChunks,
+                this.file.name,
+                (slicePercent) => {
+                    if (onProgress) {
+                        const totalPercent = Math.round(
+                            ((chunk.index + slicePercent / 100) / totalChunks) * 100
+                        );
+                        onProgress(totalPercent);
+                    }
+                },
+                this.abortController.signal,
+                this.profile
+            );
+        }
+
+        const result = await this.api.completeChunkUpload(
+            this.uploadUuid,
+            totalChunks,
+            this.file.name,
+            this.file.size,
+            this.profile
+        );
+
+        if (onProgress) onProgress(100);
+
+        return result;
+    }
+
+    cancel() {
+        this.abortController.abort();
+        this.api.cancelUpload(this.uploadUuid).catch(() => {});
+    }
+}

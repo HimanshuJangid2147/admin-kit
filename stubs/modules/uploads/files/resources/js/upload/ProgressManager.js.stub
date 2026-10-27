@@ -1,0 +1,256 @@
+export class ProgressManager {
+    constructor(containerElement, isMultiple = true) {
+        this.container = containerElement;
+        this.isMultiple = isMultiple;
+        this.objectUrls = new Map();
+    }
+
+    render(queueItems) {
+        if (!this.container) return;
+
+        if (queueItems.length === 0) {
+            this.objectUrls.forEach((url) => URL.revokeObjectURL(url));
+            this.objectUrls.clear();
+            this.container.innerHTML = '';
+            return;
+        }
+
+        const totalProgress = Math.round(
+            queueItems.reduce((acc, item) => acc + item.progress, 0) / queueItems.length
+        );
+
+        const tOverallProgress = typeof window.trans === 'function' ? window.trans('Overall Upload Progress') : 'Overall Upload Progress';
+        const tCompleted = typeof window.trans === 'function' ? window.trans('Completed') : 'Completed';
+        const tUploading = typeof window.trans === 'function' ? window.trans('Uploading') : 'Uploading';
+        const tFailed = typeof window.trans === 'function' ? window.trans('Failed') : 'Failed';
+        const tQueued = typeof window.trans === 'function' ? window.trans('Queued') : 'Queued';
+        const tRetry = typeof window.trans === 'function' ? window.trans('Retry') : 'Retry';
+        const tCancel = typeof window.trans === 'function' ? window.trans('Cancel') : 'Cancel';
+        const tDelete = typeof window.trans === 'function' ? window.trans('Delete') : 'Delete';
+
+        const hasActiveUploads = queueItems.some(i => i.status === 'uploading' || i.status === 'queued');
+
+        let html = '';
+
+        if (hasActiveUploads) {
+            html += `
+                <div class="mb-4 p-4 rounded-xl bg-background border border-border/50 shadow-sm space-y-2">
+                    <div class="flex items-center justify-between text-xs font-medium text-foreground">
+                        <span>${tOverallProgress}</span>
+                        <span>${totalProgress}%</span>
+                    </div>
+                    <div class="w-full bg-muted rounded-full h-2 overflow-hidden">
+                        <div class="bg-amber-500 h-2 transition-all duration-200" style="width: ${totalProgress}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        const deriveAltText = (filename) => {
+            if (!filename) return '';
+            let name = filename.replace(/\.[^/.]+$/, '');
+            name = name.replace(/^(vecteezy|freepik|stock|img|photo|image|dsc|px)[_\-\s]+/i, '');
+            name = name.replace(/[_\-\s]+\d+$/, '');
+            name = name.replace(/[_\-\+\.]+/g, ' ');
+            return name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        };
+
+        if (!this.isMultiple) {
+            // ── Single-File Upload Preview (Full Space Banner Layout) ────────
+            const item = queueItems[queueItems.length - 1]; // Latest single upload item
+            if (item) {
+                let statusBadge = '';
+                if (item.status === 'completed') {
+                    statusBadge = `<span class="px-2.5 py-1 text-xs font-bold bg-emerald-500/90 text-white rounded-lg backdrop-blur-md shadow-md">${tCompleted}</span>`;
+                } else if (item.status === 'uploading') {
+                    statusBadge = `<span class="px-2.5 py-1 text-xs font-bold bg-amber-500/90 text-white rounded-lg animate-pulse">${tUploading} (${item.progress}%)</span>`;
+                } else if (item.status === 'failed') {
+                    statusBadge = `<span class="px-2.5 py-1 text-xs font-bold bg-rose-500/90 text-white rounded-lg">${tFailed}</span>`;
+                } else {
+                    statusBadge = `<span class="px-2.5 py-1 text-xs font-bold bg-slate-500/90 text-white rounded-lg">${tQueued}</span>`;
+                }
+
+                const isImage = item.file.type && item.file.type.startsWith('image/');
+                if (isImage) {
+                    if (!this.objectUrls.has(item.id)) {
+                        this.objectUrls.set(item.id, URL.createObjectURL(item.file));
+                    }
+                }
+                const previewUrl = isImage ? this.objectUrls.get(item.id) : null;
+                const autoAltText = deriveAltText(item.file?.name || '');
+
+                if (isImage && previewUrl) {
+                    html += `
+                        <div class="relative group rounded-2xl overflow-hidden border border-border/80 h-48 md:h-64 shadow-md bg-card w-full my-2">
+                            <img src="${previewUrl}" alt="${autoAltText || item.file.name}" class="w-full h-full object-cover">
+
+                            <div class="absolute top-3 left-3 z-10 flex items-center gap-2">
+                                ${statusBadge}
+                            </div>
+
+                            ${item.status === 'uploading' || item.status === 'queued' ? `
+                                <button type="button" class="btn-cancel-upload absolute top-3 right-3 h-8 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 flex items-center justify-center text-white text-xs font-bold cursor-pointer z-20 shadow-md transition-all" data-id="${item.id}">
+                                    <span>${tCancel}</span>
+                                </button>
+                            ` : ''}
+
+                            ${item.status === 'completed' ? `
+                                <button type="button" class="btn-remove-upload absolute top-3 right-3 h-8 w-8 rounded-xl bg-red-600 hover:bg-red-700 flex items-center justify-center text-white cursor-pointer z-20 shadow-md transition-transform hover:scale-105 active:scale-95" data-id="${item.id}" title="${tDelete}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            ` : ''}
+
+                            ${item.status === 'failed' ? `
+                                <div class="absolute top-3 right-3 flex items-center gap-2 z-20">
+                                    <button type="button" class="btn-retry-upload h-8 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold cursor-pointer shadow-md" data-id="${item.id}">${tRetry}</button>
+                                    <button type="button" class="btn-remove-upload h-8 w-8 rounded-xl bg-red-600 hover:bg-red-700 flex items-center justify-center text-white cursor-pointer shadow-md" data-id="${item.id}" title="${tDelete}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ` : ''}
+
+                            <div class="absolute bottom-0 left-0 right-0 bg-black/75 backdrop-blur-md px-3 py-2 flex items-center gap-2 border-t border-white/10 z-20">
+                                <span class="text-[10px] font-bold text-white/70 uppercase tracking-wider shrink-0">Alt:</span>
+                                <input
+                                    type="text"
+                                    class="staged-alt-input w-full bg-transparent text-white text-xs px-2 py-1 border border-white/20 rounded-lg outline-none focus:border-primary transition-colors font-sans"
+                                    data-id="${item.id}"
+                                    value="${item.userAltText !== undefined ? item.userAltText : autoAltText}"
+                                    placeholder="Edit Image Alt Text..."
+                                    title="Edit Image Alt Text"
+                                />
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Non-image single file (PDF/Document)
+                    html += `
+                        <div class="relative group rounded-2xl border border-border p-3.5 shadow-sm bg-card flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 w-full my-2 overflow-hidden">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <span class="font-mono text-xs font-bold text-amber-500 bg-amber-500/10 px-2.5 py-1.5 rounded-lg uppercase shrink-0">${item.file.name.split('.').pop()}</span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-medium text-foreground text-xs sm:text-sm truncate max-w-full" title="${item.file.name}">${item.file.name}</p>
+                                    <span class="text-[11px] text-muted-foreground">${(item.file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                ${statusBadge}
+                                ${item.status === 'completed' ? `
+                                    <button type="button" class="btn-remove-upload p-2 bg-red-600/15 text-red-500 hover:bg-red-600 hover:text-white rounded-xl cursor-pointer transition-colors duration-150 shrink-0" data-id="${item.id}" title="${tDelete}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            // ── Multiple-Files Upload Preview (4-Column Responsive Grid) ────
+            html += `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-3">`;
+
+            queueItems.forEach((item) => {
+                let statusBadge = '';
+                if (item.status === 'completed') {
+                    statusBadge = `<span class="px-2 py-0.5 text-[9px] font-bold bg-emerald-500/90 text-white rounded-md backdrop-blur-md shadow-sm">${tCompleted}</span>`;
+                } else if (item.status === 'uploading') {
+                    statusBadge = `<span class="px-2 py-0.5 text-[9px] font-bold bg-amber-500/90 text-white rounded-md animate-pulse">${tUploading} (${item.progress}%)</span>`;
+                } else if (item.status === 'failed') {
+                    statusBadge = `<span class="px-2 py-0.5 text-[9px] font-bold bg-rose-500/90 text-white rounded-md">${tFailed}</span>`;
+                } else {
+                    statusBadge = `<span class="px-2 py-0.5 text-[9px] font-bold bg-slate-500/90 text-white rounded-md">${tQueued}</span>`;
+                }
+
+                const isImage = item.file.type && item.file.type.startsWith('image/');
+                if (isImage) {
+                    if (!this.objectUrls.has(item.id)) {
+                        this.objectUrls.set(item.id, URL.createObjectURL(item.file));
+                    }
+                }
+                const previewUrl = isImage ? this.objectUrls.get(item.id) : null;
+                const autoAltText = deriveAltText(item.file?.name || '');
+
+                if (isImage && previewUrl) {
+                    html += `
+                        <div class="relative group rounded-2xl overflow-hidden border border-border h-32 shadow-sm bg-card">
+                            <img src="${previewUrl}" alt="${autoAltText || item.file.name}" class="w-full h-full object-cover">
+                            
+                            <div class="absolute top-2 left-2 z-10 flex items-center gap-1">
+                                ${statusBadge}
+                            </div>
+
+                            ${item.status === 'uploading' || item.status === 'queued' ? `
+                                <button type="button" class="btn-cancel-upload absolute top-2 right-2 h-7 px-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 flex items-center justify-center text-white text-[10px] font-bold cursor-pointer z-20 shadow-md transition-all" data-id="${item.id}">
+                                    <span>${tCancel}</span>
+                                </button>
+                            ` : ''}
+
+                            ${item.status === 'completed' ? `
+                                <button type="button" class="btn-remove-upload absolute top-2 right-2 h-7 w-7 rounded-xl bg-red-600 hover:bg-red-700 flex items-center justify-center text-white cursor-pointer z-20 shadow-md transition-transform hover:scale-105 active:scale-95" data-id="${item.id}" title="${tDelete}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            ` : ''}
+
+                            ${item.status === 'failed' ? `
+                                <div class="absolute top-2 right-2 flex items-center gap-1 z-20">
+                                    <button type="button" class="btn-retry-upload h-7 px-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold cursor-pointer shadow-md" data-id="${item.id}">${tRetry}</button>
+                                    <button type="button" class="btn-remove-upload h-7 w-7 rounded-xl bg-red-600 hover:bg-red-700 flex items-center justify-center text-white cursor-pointer shadow-md" data-id="${item.id}" title="${tDelete}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ` : ''}
+
+                            <div class="absolute bottom-0 left-0 right-0 bg-black/70 z-20">
+                                <input
+                                    type="text"
+                                    class="staged-alt-input w-full bg-transparent text-white text-[10px] px-2 py-1 border-none outline-none focus:bg-black/90 transition-colors font-sans truncate"
+                                    data-id="${item.id}"
+                                    value="${item.userAltText !== undefined ? item.userAltText : autoAltText}"
+                                    placeholder="Edit Alt text..."
+                                    title="Edit Image Alt Text"
+                                />
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="relative group rounded-2xl overflow-hidden border border-border h-32 p-3 shadow-sm bg-card flex flex-col justify-between">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-[10px] text-muted-foreground uppercase bg-muted px-2 py-0.5 rounded">${item.file.name.split('.').pop()}</span>
+                                ${statusBadge}
+                            </div>
+                            <p class="font-medium text-foreground text-xs truncate my-1">${item.file.name}</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-muted-foreground">${(item.file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                                ${item.status === 'uploading' || item.status === 'queued' ? `
+                                    <button type="button" class="btn-cancel-upload px-2 py-0.5 bg-amber-500/10 text-amber-600 rounded text-[10px] font-medium" data-id="${item.id}">${tCancel}</button>
+                                ` : ''}
+                                ${item.status === 'completed' ? `
+                                    <button type="button" class="btn-remove-upload p-1.5 bg-red-600 text-white rounded-xl cursor-pointer" data-id="${item.id}" title="${tDelete}">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += `</div>`;
+        }
+
+        this.container.innerHTML = html;
+    }
+}

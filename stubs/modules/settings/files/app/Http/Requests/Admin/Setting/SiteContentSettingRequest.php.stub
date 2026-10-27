@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Http\Requests\Admin\Setting;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class SiteContentSettingRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'site_quote' => 'required|array',
+            'site_quote.en' => 'required|string|max:500',
+            'site_quote.*' => 'nullable|string|max:500',
+            'address' => 'required|string|max:255',
+            'std_code' => 'required|string|max:10',
+            'phone' => 'required|string|max:20',
+            'email' => 'required|email|max:255',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'site_quote.required' => statictranslations('The site quote field is required.'),
+            'site_quote.array' => statictranslations('The site quote must be an array.'),
+            'site_quote.en.required' => statictranslations('The English site quote is required.'),
+            'site_quote.en.string' => statictranslations('The English site quote must be a string.'),
+            'site_quote.en.max' => statictranslations('The English site quote may not be greater than 500 characters.'),
+            'address.required' => statictranslations('The address field is required.'),
+            'address.string' => statictranslations('The address must be a string.'),
+            'address.max' => statictranslations('The address may not be greater than 255 characters.'),
+            'std_code.required' => statictranslations('The STD code field is required.'),
+            'std_code.string' => statictranslations('The STD code must be a string.'),
+            'std_code.max' => statictranslations('The STD code may not be greater than 10 characters.'),
+            'phone.required' => statictranslations('The phone number field is required.'),
+            'phone.string' => statictranslations('The phone number must be a string.'),
+            'phone.max' => statictranslations('The phone number may not be greater than 20 characters.'),
+            'email.required' => statictranslations('The email address field is required.'),
+            'email.email' => statictranslations('Please enter a valid email address.'),
+            'email.max' => statictranslations('The email address may not be greater than 255 characters.'),
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors.
+     */
+    public function attributes(): array
+    {
+        return [
+            'site_quote' => statictranslations('Site Quote'),
+            'site_quote.en' => statictranslations('site quote (English)'),
+            'site_quote.ru' => statictranslations('site quote (Russian)'),
+            'site_quote.kk' => statictranslations('site quote (Kazakh)'),
+            'address' => statictranslations('Address'),
+            'std_code' => statictranslations('STD Code'),
+            'phone' => statictranslations('Phone Number'),
+            'email' => statictranslations('Email Address'),
+        ];
+    }
+}

@@ -1,0 +1,16 @@
+<?php
+
+use Illuminate\Support\Facades\App;
+
+if (! function_exists('statictranslations')) {
+    function statictranslations($text, $targetLocale = null)
+    {
+        if ($text === null || $text === '') {
+            return $text;
+        }
+
+        $locale = $targetLocale ?? App::getLocale();
+
+        return __($text, [], $locale);
+    }
+}
